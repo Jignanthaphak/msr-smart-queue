@@ -1,0 +1,2 @@
+
+declare interface userAgentType {}
