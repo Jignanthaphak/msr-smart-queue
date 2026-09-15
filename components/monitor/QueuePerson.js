@@ -6,7 +6,7 @@ import useDefaultDataStore from "@/stores/useDefaultDataStore";
 import { date, datetime, times, day, nowMs, nowSec, nowDate } from "@/lib/utils/dateFormat";
 import Input from '@/components/common/Form/Input';
 import Select from '@/components/common/Form/Select';
-export default function QueuePerson({dataScreening = []}) {
+export default function QueuePerson({dataScreening = [], loading = false}) {
 
     const defaultData = useDefaultDataStore((state) => state.defaultData)   
 
@@ -124,7 +124,13 @@ export default function QueuePerson({dataScreening = []}) {
                         </tr>
                     </thead>
                     <tbody>
-                    {filteredData && filteredData.length > 0 ? (
+                    {loading && (!filteredData || filteredData.length === 0) ? (
+                        <tr>
+                            <td colSpan="100%" className="text-center py-4 text-gray-500">
+                                <span className="inline-block animate-spin mr-2">⏳</span> กำลังโหลดข้อมูลคิวตรวจ...
+                            </td>
+                        </tr>
+                    ) : filteredData && filteredData.length > 0 ? (
                         filteredData.map((item, index) => (
                             <tr key={index} className="">
                             <td>

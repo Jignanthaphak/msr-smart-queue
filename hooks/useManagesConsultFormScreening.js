@@ -44,7 +44,9 @@ export function useManagesConsultFormScreening() {
     validateAndScrollToError,
     onChangeFormCallback,
     setFormData,
-    setFormComplete
+    setFormComplete,
+    initialFormData,
+    initialFormComplete,
   } = useConsultData();
 
   // ---------- initial UI state ----------
@@ -76,8 +78,8 @@ export function useManagesConsultFormScreening() {
 
   // ----------- reset form -------------
   const resetFormState = () => {
-    setFormData({});          // ล้าง formData
-    setFormComplete({});      // ล้าง formComplete
+    setFormData(initialFormData || {});          // ล้าง formData
+    setFormComplete(initialFormComplete || {});  // ล้าง formComplete (ทุกแท็บเป็น false)
     setConsultData(null);     // ล้าง consultData
     setConsultDataBK(null);   // ล้าง backup
     setPersonData(null);      // ล้าง personData
@@ -108,8 +110,8 @@ export function useManagesConsultFormScreening() {
     setConsultData(clone?.screenings || null);
     setConsultDataBK(clone?.screenings || null);
     setPersonData(clone);
-    setFormData({});
-    setFormComplete({});
+    setFormData(initialFormData || {});
+    setFormComplete(initialFormComplete || {});
     
     // ดึงข้อมูล screening
     const hn = clone?.hn;
@@ -148,38 +150,40 @@ export function useManagesConsultFormScreening() {
     }));
   }
 
+  const TAB_INFOS = [
+    { key: "consulting", formKey: "ConsultingForm", tabIndex: 1, name: "ข้อมูลการให้คำปรึกษา" },
+    { key: "stress", formKey: "StressForm", tabIndex: 2, name: "สาเหตุความเครียด" },
+    { key: "risk", formKey: "RiskForm", tabIndex: 3, name: "ความเสี่ยง" },
+    { key: "assist", formKey: "AssistForm", tabIndex: 4, name: "การให้ความช่วยเหลือ" },
+    { key: "follow", formKey: "FollowForm", tabIndex: 5, name: "การติดตาม" },
+    { key: "pdx", formKey: "PdxForm", tabIndex: 6, name: "รหัส PDx" },
+    { key: "satisfaction", formKey: "SatisfactionForm", tabIndex: 7, name: "ความพึงพอใจ" },
+  ];
+
   // ----------- validate และ scroll ไป field แรกที่ error -------------
   const handleValidateAndScroll = async () => {
     const validation = await validateAndScrollToError();
 
-    // ถ้า subform ไหน validation fail ให้ switch tab และ focus field แรก
-    if (!validation.consulting) {
-      setUIState(prev => ({ ...prev, activeTab: 1 }));
-      setTimeout(() => refs.consulting.current?.validateAndFocus?.(true), 100);
-      return false;
-    }
-    if (!validation.stress) {
-      setUIState(prev => ({ ...prev, activeTab: 2 }));
-      setTimeout(() => refs.stress.current?.validateAndFocus?.(true), 100);
-      return false;
-    }
-    if (!validation.risk) {
-      setUIState(prev => ({ ...prev, activeTab: 3 }));
-      setTimeout(() => refs.risk.current?.validateAndFocus?.(true), 100);
-      return false;
-    }
-    if (!validation.assist) {
-      setUIState(prev => ({ ...prev, activeTab: 4 }));
-      setTimeout(() => refs.assist.current?.validateAndFocus?.(true), 100);
-      return false;
-    }
-    if (!validation.follow) {
-      setUIState(prev => ({ ...prev, activeTab: 5 }));
-      setTimeout(() => refs.follow.current?.validateAndFocus?.(true), 100);
-      return false;
+    // หาแท็บทั้งหมดที่ยังไม่ผ่าน validation หรือยังไม่ได้กรอก
+    const missingTabs = TAB_INFOS.filter(item => !validation[item.key]);
+
+    if (missingTabs.length > 0) {
+      const firstMissing = missingTabs[0];
+      setUIState(prev => ({ ...prev, activeTab: firstMissing.tabIndex }));
+      setTimeout(() => {
+        refs[firstMissing.key]?.current?.validateAndFocus?.(true);
+      }, 100);
+
+      return {
+        isValid: false,
+        missingTabs,
+      };
     }
 
-    return true;
+    return {
+      isValid: true,
+      missingTabs: [],
+    };
   };
 
   // ----------- API call handlers -------------
@@ -257,12 +261,33 @@ export function useManagesConsultFormScreening() {
 
      try {
       
-      const isCheck = await handleValidateAndScroll();
-      if(!isCheck) return; 
-      const confirm = await showAlert({title: 'ยืนยันการบันทึกข้อมูล Consult!', message: "กรุณาตรวจสอบข้อมูล Consult", icon: 'info', type: 'confirm', loadingStyle: 'modal', confirmText: "บันทึกข้อมูล", cancelText: "ยกเลิก", allowOutsideClick: false, allowEscapeKey: false, allowEnterKey: false })
-      if(!confirm) return
+      const checkResult = await handleValidateAndScroll();
+      if (!checkResult.isValid) {
+        const missingList = checkResult.missingTabs.map((t, idx) => `${idx + 1}. ${t.name}`).join("\n");
+        await showAlert({
+          title: "ยังกรอกข้อมูลไม่ครบทุกแท็บ!",
+          message: `กรุณากรอกข้อมูลให้ครบทุกแท็บก่อนบันทึก\n\nแท็บที่ยังไม่ได้กรอก:\n${missingList}`,
+          type: "alert",
+          icon: "warning",
+        });
+        return;
+      }
 
-      setUIState(prev => ({...prev, disabledBtn: true}))
+      const confirm = await showAlert({
+        title: 'ยืนยันการบันทึกข้อมูล Consult!',
+        message: "กรุณาตรวจสอบข้อมูล Consult ก่อนบันทึก",
+        icon: 'info',
+        type: 'confirm',
+        loadingStyle: 'modal',
+        confirmText: "บันทึกข้อมูล",
+        cancelText: "ยกเลิก",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        allowEnterKey: false,
+      });
+      if(!confirm) return;
+
+      setUIState(prev => ({...prev, disabledBtn: true}));
      
       const result = await updateconsult(uiState.screeningId, formData);
       message.success("บันทึกข้อมูล Consult เรียบร้อย");
@@ -285,15 +310,27 @@ export function useManagesConsultFormScreening() {
 
     try {
       
-      const isCheck = await handleValidateAndScroll();
-      if(!isCheck){
-        setUIState(prev => ({ ...prev, disabledForm:false, mode:"editing", btnState:6 }));
-        await showAlert({ title:'กรุณาตรวจสอบ!', message:'ยังกรอกข้อมูลไม่ครบ', type:'alert', icon:'warning' });
+      const checkResult = await handleValidateAndScroll();
+      if (!checkResult.isValid) {
+        setUIState(prev => ({ ...prev, disabledForm: false, mode: "editing", btnState: 6 }));
+        const missingList = checkResult.missingTabs.map((t, idx) => `${idx + 1}. ${t.name}`).join("\n");
+        await showAlert({
+          title: "ยังกรอกข้อมูลไม่ครบทุกแท็บ!",
+          message: `กรุณากรอกข้อมูลให้ครบทุกแท็บก่อนยืนยันส่งตรวจ\n\nแท็บที่ยังไม่ได้กรอก:\n${missingList}`,
+          type: "alert",
+          icon: "warning",
+        });
         return;
       }
-      const confirm = await showAlert({ title:'ยืนยันส่งตรวจ',  message: "กรุณาตรวจสอบข้อมูลก่อนยืนยันส่งตรวจ", type:'confirm' });
+
+      const confirm = await showAlert({
+        title: 'ยืนยันส่งตรวจ',
+        message: "กรุณาตรวจสอบข้อมูลก่อนยืนยันส่งตรวจ",
+        type: 'confirm'
+      });
       if(!confirm) return;
-      setUIState(prev => ({ ...prev, disabledBtn:true }));
+
+      setUIState(prev => ({ ...prev, disabledBtn: true }));
       await patchconsult(uiState.screeningId);
 
       message.success("ส่งตรวจเรียบร้อย");

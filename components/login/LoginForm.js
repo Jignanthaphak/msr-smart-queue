@@ -1,4 +1,4 @@
-// /conponents/login/LoginForm.js
+﻿// /conponents/login/LoginForm.js
 'use client'
 import { LogIn } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
@@ -7,18 +7,60 @@ import Button from '@/components/common/Form/Button';
 import { BaseSchema } from "@/lib/validators/form/login/schema";
 import { loginUser } from "@/services/auth";
 import useAuthStore from "@/stores/useAuthStore";
+import clientConfig from "@/config/Client";
+
+function ThaidLogoIcon({ className = "thaid-icon-img" }) {
+  return (
+    <svg className={className} viewBox="0 0 95 34" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ height: '26px', width: 'auto', verticalAlign: 'middle', display: 'inline-block' }}>
+      <defs>
+        <clipPath id="thaid-flag-dot">
+          <circle cx="49" cy="8" r="4.5" />
+        </clipPath>
+      </defs>
+      {/* Thai Flag Dot on i */}
+      <g clipPath="url(#thaid-flag-dot)">
+        <rect x="43" y="3.5" width="12" height="1.8" fill="#EF3340" />
+        <rect x="43" y="5.3" width="12" height="1.4" fill="#FFFFFF" />
+        <rect x="43" y="6.7" width="12" height="2.6" fill="#00247D" />
+        <rect x="43" y="9.3" width="12" height="1.4" fill="#FFFFFF" />
+        <rect x="43" y="10.7" width="12" height="1.8" fill="#EF3340" />
+      </g>
+      {/* Text thaID */}
+      <text x="2" y="28" fontFamily="Arial, Helvetica, sans-serif" fontSize="26" fontWeight="800" fill="#FFFFFF" letterSpacing="-0.5">
+        tha<tspan dx="1">ı</tspan><tspan dx="2">D</tspan>
+      </text>
+    </svg>
+  );
+}
+
 export default function LoginForm({  onSubmitFinish  }) {
 
     const setStoreLogin = useAuthStore((state) => state.setStoreLogin);
 
     const [showPassword, setShowPassword] = useState(false);
     const [logging, setLogging] = useState(false);
+    const [thaidLogging, setThaidLogging] = useState(false);
     const [msgError, setMsgError] = useState("");
     const [animatedLogging, setAnimatedLogging] = useState("")
 
     const [loginData, setLoginData] = useState({ username: "", password: "" });
     const [warnFields, setWarnFields] = useState({});
     const sanitizeTimeouts = useRef({});
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const err = params.get("error");
+            if (err === "thaid_not_found") {
+                setMsgError("ไม่พบบัญชีผู้ใช้ที่ผูกกับเลขประจำตัวประชาชน ThaID ในระบบ กรุณาติดต่อผู้ดูแลระบบ");
+            } else if (err === "thaid_failed") {
+                const detail = params.get("message");
+                setMsgError(detail ? `เข้าสู่ระบบ ThaID ไม่สำเร็จ: ${detail}` : "การยืนยันตัวตนด้วย ThaID ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+            } else if (err === "thaid_invalid_state") {
+                setMsgError("เซสชัน ThaID หมดอายุหรือไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง");
+            }
+        }
+    }, []);
     
     const togglePassword = () => {
         if(logging) return
@@ -112,6 +154,12 @@ export default function LoginForm({  onSubmitFinish  }) {
         }
     };
 
+    const handleThaidLogin = () => {
+        if (logging || thaidLogging) return;
+        setThaidLogging(true);
+        window.location.href = `${clientConfig.backend_url}/auth/thaid/login`;
+    };
+
   return (
     <>
          <div className='login-form'>
@@ -180,6 +228,28 @@ export default function LoginForm({  onSubmitFinish  }) {
                       </>
                     )}
                   </Button>
+                </div>
+
+                <div className="login-divider">
+                  <span>หรือ</span>
+                </div>
+
+                <div className="form-group">
+                  <button 
+                    type="button" 
+                    className="thaid-login-button"
+                    onClick={handleThaidLogin}
+                    disabled={logging || thaidLogging}
+                  > 
+                    {thaidLogging ? (
+                      <span className="thaid-btn-text">กำลังเชื่อมต่อ ThaID...</span>
+                    ) : (
+                      <>
+                        <ThaidLogoIcon className="thaid-icon-img" />
+                        <span className="thaid-btn-text">เข้าสู่ระบบโดย thaID</span>
+                      </>
+                    )}
+                  </button>
                 </div>
 
                 {msgError && 

@@ -6,6 +6,8 @@ import StressForm from '@/components/screening/Consult/StressForm';
 import RiskForm from '@/components/screening/Consult/RiskForm';
 import AssistForm from '@/components/screening/Consult/AssistForm';
 import FollowForm from '@/components/screening/Consult/FollowForm';
+import PdxForm from '@/components/screening/Consult/PdxForm';
+import SatisfactionForm from '@/components/screening/Consult/SatisfactionForm';
 import BtnForm from '@/components/screening/BtnAction/BtnForm';
 import Checkbox from '@/components/common/Form/Checkbox';
 import Input from '@/components/common/Form/Input';
@@ -15,6 +17,16 @@ import { Monitor, GraduationCap, ListStart } from 'lucide-react';
 
 import BtnAnalyzeAI from '@/components/screening/Consult/BtnAnalyzeAI';
 import AiAnalysisModal from '@/components/screening/Consult/AiAnalysisModal';
+
+const ALL_FORM_KEYS = [
+  'ConsultingForm',
+  'StressForm',
+  'RiskForm',
+  'AssistForm',
+  'FollowForm',
+  'PdxForm',
+  'SatisfactionForm',
+];
 
 export default function TabConsult({ open }) {
 
@@ -37,6 +49,9 @@ export default function TabConsult({ open }) {
 
   const [showAiModal, setShowAiModal] = useState(false);
 
+  const completedCount = ALL_FORM_KEYS.filter(key => Boolean(formComplete?.[key])).length;
+  const isAllComplete = completedCount === ALL_FORM_KEYS.length;
+
   return (
     <>
       <div id="consult-form" className={`step-box ${open ? "open" : ""}`}>
@@ -57,10 +72,10 @@ export default function TabConsult({ open }) {
                           type="checkbox"
                           id="isComplete"
                           name="isComplete" 
-                          checked={Object.values(formComplete).every(val => val === true)}
+                          checked={isAllComplete}
                           readOnly
                       />
-                      <span >กรอกข้อมูลครบถ้วน</span>
+                      <span>กรอกข้อมูลครบถ้วน ({completedCount}/7)</span>
                   
                   </div>
                   <div className="form-group !flex-col sm:!flex-row gap-2 items-left sm:items-center !text-[1rem] !font-bold mr-5">
@@ -211,7 +226,7 @@ export default function TabConsult({ open }) {
                                           type="checkbox"
                                           id="isCompleteFormAll_ConsultingForm"
                                           name="isCompleteFormAll_ConsultingForm" 
-                                          checked={formComplete.ConsultingForm}
+                                          checked={Boolean(formComplete?.ConsultingForm)}
                                           readOnly={true}
                                       />
                                       ข้อมูลการให้คำปรึกษา
@@ -226,7 +241,7 @@ export default function TabConsult({ open }) {
                                           type="checkbox"
                                           id="isCompleteFormAll_StressForm"
                                           name="isCompleteFormAll_StressForm" 
-                                          checked={formComplete.StressForm}
+                                          checked={Boolean(formComplete?.StressForm)}
                                           readOnly={true}
                                       />
                                       สาเหตุความเครียด
@@ -241,7 +256,7 @@ export default function TabConsult({ open }) {
                                           type="checkbox"
                                           id="isCompleteFormAll_RiskForm"
                                           name="isCompleteFormAll_RiskForm" 
-                                          checked={formComplete.RiskForm}
+                                          checked={Boolean(formComplete?.RiskForm)}
                                           readOnly={true}
                                       />
                                       ความเสี่ยง
@@ -256,7 +271,7 @@ export default function TabConsult({ open }) {
                                           type="checkbox"
                                           id="isCompleteFormAll_AssistForm"
                                           name="isCompleteFormAll_AssistForm" 
-                                          checked={formComplete.AssistForm}
+                                          checked={Boolean(formComplete?.AssistForm)}
                                           readOnly={true}
                                       />
                                       การให้ความช่วยเหลือ
@@ -271,10 +286,40 @@ export default function TabConsult({ open }) {
                                           type="checkbox"
                                           id="isCompleteFormAll_FollowForm"
                                           name="isCompleteFormAll_FollowForm" 
-                                          checked={formComplete.FollowForm}
+                                          checked={Boolean(formComplete?.FollowForm)}
                                           readOnly={true}
                                       />
                                       การติดตาม
+                                  </h3>
+                              </div>
+                          </div>
+
+                          <div className={`step-item ${uiState.activeTab === 6 ? "current" : ""}`} data-target="#pdx-form"  onClick={()=>setUIState(prev => ({...prev, activeTab: 6}))}>
+                              <div className="step-label">
+                                  <h3>
+                                      <Checkbox 
+                                          type="checkbox"
+                                          id="isCompleteFormAll_PdxForm"
+                                          name="isCompleteFormAll_PdxForm" 
+                                          checked={Boolean(formComplete?.PdxForm)}
+                                          readOnly={true}
+                                      />
+                                      รหัส PDx
+                                  </h3>
+                              </div>
+                          </div>
+
+                          <div className={`step-item ${uiState.activeTab === 7 ? "current" : ""}`} data-target="#satisfaction-form"  onClick={()=>setUIState(prev => ({...prev, activeTab: 7}))}>
+                              <div className="step-label">
+                                  <h3>
+                                      <Checkbox 
+                                          type="checkbox"
+                                          id="isCompleteFormAll_SatisfactionForm"
+                                          name="isCompleteFormAll_SatisfactionForm" 
+                                          checked={Boolean(formComplete?.SatisfactionForm)}
+                                          readOnly={true}
+                                      />
+                                      ความพึงพอใจ
                                   </h3>
                               </div>
                           </div>
@@ -307,6 +352,18 @@ export default function TabConsult({ open }) {
                           <div id="follow-form" className={`step-box ${uiState.activeTab === 5 ? "open" : ""}`}>
                           
                               <FollowForm key={uiState.resetKey} ref={refs.follow} consultData={consultData} disabledForm={uiState.disabledForm} onChangeFormFollow={onChangeFormCallback.follow} />
+                          
+                          </div>
+
+                          <div id="pdx-form" className={`step-box ${uiState.activeTab === 6 ? "open" : ""}`}>
+                          
+                              <PdxForm key={uiState.resetKey} ref={refs.pdx} consultData={consultData} disabledForm={uiState.disabledForm} onChangeFormPdx={onChangeFormCallback.pdx} />
+                          
+                          </div>
+
+                          <div id="satisfaction-form" className={`step-box ${uiState.activeTab === 7 ? "open" : ""}`}>
+                          
+                              <SatisfactionForm key={uiState.resetKey} ref={refs.satisfaction} consultData={consultData} disabledForm={uiState.disabledForm} onChangeFormSatisfaction={onChangeFormCallback.satisfaction} />
                           
                           </div>
 

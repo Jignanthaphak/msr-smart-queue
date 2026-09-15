@@ -31,3 +31,7 @@ export function getdashboardai(body) {
   return POST(clientConfig.backend_url+"/report/dashboard_ai", body);
 }
 
+export function getreporteclaim(paramsData) {
+  return GET(clientConfig.backend_url+"/report/report_eclaim", paramsData);
+}
+

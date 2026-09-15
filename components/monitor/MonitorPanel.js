@@ -8,6 +8,7 @@ import clientConfig from "@/config/Client";
 
 export default function MonitorPanel() {
 
+  const [loading, setLoading] = useState(true);
   const [dataExten, setDataSend] = useState({
     screenings: [],
     inspector: [],
@@ -31,11 +32,12 @@ export default function MonitorPanel() {
         screenings: payload?.screenings || [],
         inspector: payload?.inspector || [],
       }))
-        
+      setLoading(false);
     };
 
     evtSource.onerror = (err) => {
       console.error("SSE error", err);
+      setLoading(false);
     };
 
 
@@ -46,8 +48,8 @@ export default function MonitorPanel() {
   return (
     <>
         <div className="card">
-            <QueuePerson dataScreening={dataExten.screenings} />
-            <QueueInspector dataInspector={dataExten.inspector}/>
+            <QueuePerson dataScreening={dataExten.screenings} loading={loading} />
+            <QueueInspector dataInspector={dataExten.inspector} loading={loading} />
             <TableHistoryScreening />
         </div>
 

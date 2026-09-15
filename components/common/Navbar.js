@@ -1,7 +1,7 @@
 // /conponents/common/Navbar.js
 "use client"
 import Link from "next/link";
-import { Stethoscope, FileText, MonitorCog, CalendarClock } from 'lucide-react';
+import { Stethoscope, FileText, MonitorCog, CalendarClock, ShieldCheck } from 'lucide-react';
 export default function Navbar() {
   return (
     <>
@@ -24,7 +24,7 @@ export default function Navbar() {
                     <span className="hide-in-modern">
                         📊
                     </span>
-                    รายงาน Excel
+                    รายงานสรุป
                 </Link>
                 <Link href="/report/report_pdf" className="nav-item">
                 
@@ -32,9 +32,9 @@ export default function Navbar() {
                         <FileText />
                     </span>
                     <span className="hide-in-modern">
-                        📊
+                        📄
                     </span>
-                   รายงาน PDF
+                   รายงานคืนข้อมูล
                 </Link>
                 {/* ปิดเมนู "รายงาน ศูนย์ให้คำปรึกษา" ชั่วคราว (2026-07-26) — ไม่ได้ลบ เปิดคืนได้โดยเอาคอมเมนต์ออก
                 <Link href="/report/report_counseling_center" className="nav-item">
@@ -56,7 +56,17 @@ export default function Navbar() {
                     <span className="hide-in-modern">
                         📅
                     </span>
-                   รายงาน ตารางนัดหมาย
+                   ตารางนัดหมาย
+                </Link>
+                <Link href="/report/report_eclaim" className="nav-item">
+
+                    <span className="show-in-modern">
+                        <ShieldCheck />
+                    </span>
+                    <span className="hide-in-modern">
+                        📋
+                    </span>
+                   e-Claim
                 </Link>
                 <Link href="/report/dashboard" className="nav-item">
 
@@ -66,7 +76,7 @@ export default function Navbar() {
                     <span className="hide-in-modern">
                         📈
                     </span>
-                   แดชบอร์ด
+                   Dashboard
                 </Link>
             </div>
         </nav>

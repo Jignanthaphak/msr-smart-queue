@@ -9,9 +9,14 @@ import { useConsultFormStress }from "@/hooks/useConsultFormStress";
 import { useConsultFormRisk }from "@/hooks/useConsultFormRisk";
 import { useConsultFormAssist}from "@/hooks/useConsultFormAssist";
 import { useConsultFormFollow}from "@/hooks/useConsultFormFollow";
+import PdxForm from '@/components/screening/Consult/PdxForm';
+import SatisfactionForm from '@/components/screening/Consult/SatisfactionForm';
 import { Activity, Brain, BrainCog, HeartPulse, HeartCrack, GraduationCap } from 'lucide-react';
 
 const DetailConsultForm = forwardRef(({ consultData, isEdit = false, disabledForm = true, onChangeFormConsult }, ref) => {
+
+  const pdxRef = useRef(null);
+  const satisfactionRef = useRef(null);
 
   const {
       formData: formDataConsulting,
@@ -75,6 +80,12 @@ const DetailConsultForm = forwardRef(({ consultData, isEdit = false, disabledFor
           break;
         case 'follow':
           isValid = validateFormFollow(true);
+          break;
+        case 'pdx':
+          isValid = pdxRef.current?.validateAndFocus ? await pdxRef.current.validateAndFocus(true) : true;
+          break;
+        case 'satisfaction':
+          isValid = satisfactionRef.current?.validateAndFocus ? await satisfactionRef.current.validateAndFocus(true) : true;
           break;
       }
       return isValid;
@@ -650,6 +661,28 @@ const DetailConsultForm = forwardRef(({ consultData, isEdit = false, disabledFor
 
                 </div>
 
+              </div>
+
+              {/* รหัสการวินิจฉัยหลัก (Principle Diagnosis - PDx) */}
+              <div className="flex flex-col gap-3 w-full px-5 py-3 border-b-1 border-b-green-200" name="pdx_section">
+                <span className='!text-[16px]'> รหัส PDx </span>
+                <PdxForm 
+                  ref={pdxRef} 
+                  consultData={consultData} 
+                  disabledForm={disabledForm} 
+                  onChangeFormPdx={onChangeFormConsult?.pdx} 
+                />
+              </div>
+
+              {/* ความพึงพอใจต่อการรับบริการ */}
+              <div className="flex flex-col gap-3 w-full px-5 py-3" name="satisfaction_section">
+                <span className='!text-[16px]'> ความพึงพอใจ </span>
+                <SatisfactionForm 
+                  ref={satisfactionRef} 
+                  consultData={consultData} 
+                  disabledForm={disabledForm} 
+                  onChangeFormSatisfaction={onChangeFormConsult?.satisfaction} 
+                />
               </div>
 
             </div>

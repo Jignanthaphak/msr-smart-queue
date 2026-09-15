@@ -540,4 +540,91 @@
         transform: translateX(50%) translateY(-3px);
       }
     }
+
+    .thaid-login-button {
+      padding: 10px 16px;
+    }
+    .thaid-icon-img {
+      height: 24px;
+    }
+  }
+
+  /* =========================================================
+   * ThaID Login Button & Divider Styles
+   * ========================================================= */
+  .login-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 18px 0;
+    color: #9ca3af;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .login-divider::before,
+  .login-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .login-divider span {
+    padding: 0 14px;
+    color: #6b7280;
+    font-size: 14px;
+    background: transparent;
+  }
+
+  .thaid-login-button {
+    width: 100%;
+    background: #14194f;
+    color: #ffffff;
+    border: 1px solid #14194f;
+    padding: 13px 20px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    box-shadow: 0 4px 6px -1px rgba(20, 25, 79, 0.15), 0 2px 4px -2px rgba(20, 25, 79, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .thaid-login-button:hover:not(:disabled) {
+    background: #1e266f;
+    border-color: #1e266f;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(20, 25, 79, 0.25), 0 4px 6px -4px rgba(20, 25, 79, 0.15);
+  }
+
+  .thaid-login-button:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px -1px rgba(20, 25, 79, 0.2);
+  }
+
+  .thaid-login-button:disabled {
+    background: #474f7a;
+    border-color: #474f7a;
+    cursor: not-allowed;
+    opacity: 0.8;
+  }
+
+  .thaid-icon-img {
+    height: 26px;
+    width: auto;
+    object-fit: contain;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .thaid-btn-text {
+    font-size: 15px;
+    letter-spacing: 0.2px;
+    color: #ffffff;
   }

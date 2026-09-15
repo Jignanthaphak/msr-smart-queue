@@ -3,7 +3,7 @@
 import { useState, useEffect  } from "react";
 import { Monitor } from 'lucide-react';
 
-export default function QueueInspector({ dataInspector = [] }) {
+export default function QueueInspector({ dataInspector = [], loading = false }) {
 
     const [dataLog, setDataLog] = useState([])
     const [dataStatic, setDataStatic] = useState({ total: 0, completed: 0, remaining: 0 })
@@ -42,7 +42,13 @@ export default function QueueInspector({ dataInspector = [] }) {
                             </tr>
                         </thead>
                         <tbody>
-                        {dataLog && dataLog.length > 0 ? (
+                        {loading && (!dataLog || dataLog.length === 0) ? (
+                            <tr>
+                                <td colSpan="100%" className="text-center py-3 text-gray-500">
+                                    กำลังเชื่อมต่อสถานะห้องตรวจ...
+                                </td>
+                            </tr>
+                        ) : dataLog && dataLog.length > 0 ? (
                             dataLog?.map((item, index) => (
                                 <tr key={index} className="">
                                 

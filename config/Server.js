@@ -12,8 +12,8 @@ const serverConfig = {
     cookiename: "MsrordSession",
     session_password: process.env.SESSION_PASSWORD,
     httponly: true,
-    samesite: "Strict",
-    path: "/msr",
+    samesite: "Lax",
+    path: "/",
     maxage: 360000,
     // isprod: process.env.NODE_ENV === "production",
     isprod: false,
@@ -21,7 +21,11 @@ const serverConfig = {
   middleware:{
     allowed_origins:[],
     ui_session_bypass_paths:[],
-    api_session_bypass_paths:['/api/auth/login'],
+    api_session_bypass_paths:[
+      '/api/auth/login',
+      '/api/auth/thaid/login',
+      '/api/auth/thaid/callback'
+    ],
     content_type_response:"application/json",
     allowed_request_content_types: [
       "application/json",

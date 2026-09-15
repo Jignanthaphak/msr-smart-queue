@@ -8,7 +8,7 @@ import cloneDeep from 'lodash/cloneDeep';
 // ใช้สำหรับ deep copy object เพื่อไม่ให้ reference เดียวกัน
 import { useAlert } from '@/lib/utils/useAlert'; 
 // custom hook สำหรับแสดง alert
-import { useConsultData } from '@/hooks/useConsultData'; 
+import { useConsultData, initialFormData, initialFormComplete } from '@/hooks/useConsultData'; 
 import { editConsultAction } from "@/actions/admin/consult/actions";
 import {  closeConsultAction } from "@/actions/admin/screening/actions"; 
 // store สำหรับเก็บและจัดการ history ของ screening
@@ -63,8 +63,8 @@ export function useManagesConsultFormDetail(data, onEdit) {
 
   // ----------- reset form -------------
   const resetFormState = () => {
-    setFormData({});          // ล้าง formData
-    setFormComplete({});      // ล้าง formComplete
+    setFormData(initialFormData);          // ล้าง formData
+    setFormComplete(initialFormComplete);  // ล้าง formComplete
     setConsultData(null);     // ล้าง consultData
     setConsultDataBK(null);   // ล้าง backup
     setUIState(prev => ({ ...initialUIState, resetKey: prev.resetKey + 1 })); 
@@ -85,8 +85,8 @@ export function useManagesConsultFormDetail(data, onEdit) {
     setConsultData(clone?.screenings || null);
     setConsultDataBK(clone?.screenings || null);
 
-    setFormData({});
-    setFormComplete({});
+    setFormData(initialFormData);
+    setFormComplete(initialFormComplete);
 
     const hn = clone?.hn || null;
     const screeningId = clone?.screenings?.screening_id || null;
@@ -106,21 +106,36 @@ export function useManagesConsultFormDetail(data, onEdit) {
      
  }, [data]);
   
+  const SECTION_INFOS = [
+    { key: "consulting", name: "ข้อมูลการให้คำปรึกษา" },
+    { key: "stress", name: "สาเหตุความเครียด" },
+    { key: "risk", name: "ความเสี่ยง" },
+    { key: "assist", name: "การให้ความช่วยเหลือ" },
+    { key: "follow", name: "การติดตาม" },
+    { key: "pdx", name: "รหัส PDx" },
+    { key: "satisfaction", name: "ความพึงพอใจ" },
+  ];
 
   // ----------- validate และ scroll ไป field แรกที่ error -------------
- const handleValidateAndScroll = async () => {
-  const ref = formRef.current;
-  if (!ref) return false;
- 
-  const sections = ['consulting','stress','risk','assist','follow'];
+  const handleValidateAndScroll = async () => {
+    const ref = formRef.current;
+    if (!ref) return { isValid: false, missingSections: [] };
+   
+    const missingSections = [];
 
-  for (const section of sections) {
-    const result = await ref.validateAndFocusSection?.(section);
-    if (!result) return false; // เจอ false แล้วหยุดทันที
-  }
+    for (const sec of SECTION_INFOS) {
+      const result = await ref.validateAndFocusSection?.(sec.key);
+      if (!result) {
+        missingSections.push(sec);
+      }
+    }
 
-  return true;
-};
+    if (missingSections.length > 0) {
+      return { isValid: false, missingSections };
+    }
+
+    return { isValid: true, missingSections: [] };
+  };
 
   // ----------- API call handlers -------------
   const handleCloseConsult = async () => {
@@ -170,10 +185,20 @@ export function useManagesConsultFormDetail(data, onEdit) {
   
        try {
         
-        const isCheck = await handleValidateAndScroll();
-        if(!isCheck) return; 
-        const confirm = await showAlert({title: 'ยืนยันการแก้ไขข้อมูล Consult!', message: "กรุณาตรวจสอบข้อมูลก่อนแก้ไข Consult", icon: 'info', type: 'confirm', loadingStyle: 'modal', confirmText: "แก้ไขข้อมูล", cancelText: "ยกเลิก", allowOutsideClick: false, allowEscapeKey: false, allowEnterKey: false })
-        if(!confirm) return
+        const checkResult = await handleValidateAndScroll();
+        if (!checkResult.isValid) {
+          const missingList = checkResult.missingSections.map((s, idx) => `${idx + 1}. ${s.name}`).join("\n");
+          await showAlert({
+            title: "ยังกรอกข้อมูลไม่ครบทุกส่วน!",
+            message: `กรุณากรอกข้อมูลให้ครบทุกส่วนก่อนบันทึก\n\nส่วนที่ยังไม่ได้กรอก:\n${missingList}`,
+            type: "alert",
+            icon: "warning",
+          });
+          return;
+        }
+
+        const confirm = await showAlert({title: 'ยืนยันการแก้ไขข้อมูล Consult!', message: "กรุณาตรวจสอบข้อมูลก่อนแก้ไข Consult", icon: 'info', type: 'confirm', loadingStyle: 'modal', confirmText: "แก้ไขข้อมูล", cancelText: "ยกเลิก", allowOutsideClick: false, allowEscapeKey: false, allowEnterKey: false });
+        if(!confirm) return;
   
         setUIState(prev => ({...prev, disabledBtn: true}))
 
