@@ -35,7 +35,7 @@ export async function POST(req) {
     console.error(err);
     const status = err.status || 500;
     return NextResponse.json(
-      { error: status && status !== 500 ? err.message : "Server error" },
+      { error: err?.message || "Server error" },
       { status }
     );
   }
