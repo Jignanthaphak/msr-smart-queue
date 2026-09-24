@@ -7,9 +7,10 @@ import { POST } from "@/lib/utils/request";
  * @param {number|string} screening_id
  * @param {object} consult - { ConsultingForm, StressForm, RiskForm }
  */
-export function analyzeConsultAI(screening_id, consult) {
+export function analyzeConsultAI(screening_id, consult, force_refresh = false) {
   return POST(clientConfig.backend_url + "/screening/consult/ai-analyze", {
     screening_id,
     consult,
+    force_refresh,
   });
 }

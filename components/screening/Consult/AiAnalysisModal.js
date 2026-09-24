@@ -75,14 +75,14 @@ export default function AiAnalysisModal({ isOpen, onClose, screeningId, consultD
   const [meta, setMeta] = useState(null);
   const [maximized, setMaximized] = useState(false);
 
-  const runAnalyze = useCallback(async () => {
+  const runAnalyze = useCallback(async (isForce = false) => {
     if (!screeningId) return;
     setLoading(true);
     setError("");
     setData(null);
     setMeta(null);
     try {
-      const res = await analyzeConsultAI(screeningId, consultData || {});
+      const res = await analyzeConsultAI(screeningId, consultData || {}, isForce);
       if (res?.ok) {
         setData(res.data);
         setMeta(res.meta);
@@ -97,7 +97,7 @@ export default function AiAnalysisModal({ isOpen, onClose, screeningId, consultD
   }, [screeningId, consultData]);
 
   useEffect(() => {
-    if (isOpen) runAnalyze();
+    if (isOpen) runAnalyze(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
@@ -117,7 +117,7 @@ export default function AiAnalysisModal({ isOpen, onClose, screeningId, consultD
             ระบบวิเคราะห์ข้อมูล AI (Gemini)
           </h3>
           <div className="flex items-center gap-1">
-            <button type="button" onClick={runAnalyze} disabled={loading}
+            <button type="button" onClick={() => runAnalyze(true)} disabled={loading}
               className="text-slate-400 hover:text-purple-700 p-2 rounded-lg hover:bg-slate-100 disabled:opacity-40 flex items-center gap-1"
               title="วิเคราะห์อีกครั้ง">
               <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
@@ -149,7 +149,7 @@ export default function AiAnalysisModal({ isOpen, onClose, screeningId, consultD
             <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-3 text-red-600">
               <ShieldAlert className="w-10 h-10" />
               <span className="font-semibold">{error}</span>
-              <button onClick={runAnalyze} className="mt-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm">
+              <button onClick={() => runAnalyze(true)} className="mt-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm">
                 ลองใหม่อีกครั้ง
               </button>
             </div>

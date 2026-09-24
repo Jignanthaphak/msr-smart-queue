@@ -16,6 +16,7 @@ export async function POST(req) {
     const body = await req.json();
     const screening_id = body?.screening_id;
     const consult = body?.consult || {};
+    const force_refresh = Boolean(body?.force_refresh);
 
     if (!screening_id) {
       throw Object.assign(new Error("ไม่พบ screening_id"), { status: 400 });
@@ -24,6 +25,7 @@ export async function POST(req) {
     const result = await analyzeConsult({
       screening_id,
       consult,
+      force_refresh,
       create_by: session.user.userId,
       session_id: session.user.sessionId,
       recordedBy: session.user.nickName || null,
