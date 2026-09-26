@@ -54,4 +54,11 @@ next-env.d.ts
 
 /lib/generated/prisma
 
-/lib/generated/prisma
+# deployment packages & temp deploy staging
+/_deploy_bio_sa3000/
+*.zip
+
+# uploads (keep folder structure only, never commit patient images)
+/public/uploads/*
+!/public/uploads/**/.gitkeep
+

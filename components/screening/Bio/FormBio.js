@@ -2,11 +2,12 @@
 'use client';
 import clientConfig from "@/config/Client";
 import { forwardRef, useImperativeHandle, useMemo } from "react";
-import { Monitor } from 'lucide-react';
+import { Monitor, Image as ImageIcon } from 'lucide-react';
 import Input from '@/components/common/Form/Input';
 import Textarea from '@/components/common/Form/Textarea';
 import Checkbox from '@/components/common/Form/Checkbox';
 import { useBioForm } from '@/hooks/useBioForm';
+import BioReportViewer from '@/components/screening/Bio/BioReportViewer';
 
 const FormBio = forwardRef(({ bioData, disabledForm = true, onChangeFormBio }, ref) => {
    
@@ -407,6 +408,17 @@ const FormBio = forwardRef(({ bioData, disabledForm = true, onChangeFormBio }, r
                     </div>
 
                 </div>
+            </div>
+
+            {/* ส่วนแสดงภาพรายงานผลตรวจ Biofeedback (DDR & APG) จากเครื่อง SA-3000P */}
+            <div className="form-section !mt-6">
+                <BioReportViewer
+                    screeningId={bioData?.screenings?.screening_id}
+                    hn={bioData?.hn}
+                    initialDdrUrl={bioData?.screenings?.biofeedback?.ddr_image_url}
+                    initialApgUrl={bioData?.screenings?.biofeedback?.apg_image_url}
+                    isEdit={!disabledForm}
+                />
             </div>
 
         </form>

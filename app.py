@@ -1,10 +1,13 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from smartcard.System import readers
 import smartcard.Exceptions
 import logging
 import time
 import json # <--- นำเข้า json เพิ่มเพื่อพิมพ์ dict ให้ดูง่ายๆ
+import os
+import glob
+import re
 
 app = Flask(__name__)
 CORS(app)
@@ -193,6 +196,233 @@ def get_thai_id_full():
 def read_id():
     data, error = get_thai_id_full()
     if error: return jsonify({"success": False, "message": error}), 400
+    return jsonify({"success": True, "data": data})
+
+# -------------------------------------------------------------------
+# SA-3000P Biofeedback Reader
+# -------------------------------------------------------------------
+BIO_CANDIDATE_PATHS = [
+    os.environ.get("SA_BIO_DATA_DIR", ""),
+    r"D:\OneDrive\แฟรชไดรฟ\SAViewer_New THAI\EXCELDATA",
+    r"D:\OneDrive\แฟรชไดรฟ\SA THAI\EXCELDATA",
+    r"\\SA3000P\EXCELDATA",
+    r"\\SA3000P\SA THAI\EXCELDATA",
+    r"C:\SA\EXCELDATA",
+    r"C:\SA THAI\EXCELDATA",
+    r"C:\SAViewer_New THAI\EXCELDATA",
+]
+
+def find_bio_folder(custom_folder=None):
+    if custom_folder and os.path.isdir(custom_folder):
+        return custom_folder
+    for p in BIO_CANDIDATE_PATHS:
+        if p and os.path.isdir(p):
+            return p
+    return None
+
+def parse_sa_tsv(file_path):
+    if not os.path.exists(file_path):
+        return []
+    
+    content = None
+    for enc in ['utf-16le', 'utf-8-sig', 'utf-8', 'cp874', 'tis-620', 'latin1']:
+        try:
+            with open(file_path, 'r', encoding=enc, errors='strict') as f:
+                content = f.read()
+                if content and ('\t' in content or 'ChartNo' in content or 'ChartID' in content):
+                    break
+        except Exception:
+            continue
+    
+    if content is None:
+        try:
+            with open(file_path, 'r', encoding='utf-16le', errors='ignore') as f:
+                content = f.read()
+        except Exception:
+            return []
+
+    lines = [line.strip().split('\t') for line in content.splitlines() if line.strip()]
+    if not lines:
+        return []
+    
+    headers = [h.strip().lstrip('\ufeff') for h in lines[0]]
+    rows = []
+    for line in lines[1:]:
+        row_dict = {}
+        for idx, val in enumerate(line):
+            col_name = headers[idx] if idx < len(headers) else f"col_{idx}"
+            row_dict[col_name] = val.strip()
+        rows.append(row_dict)
+    return rows
+
+def to_clean_int(val, default_val=100, min_val=0, max_val=150):
+    if val is None or str(val).strip() == "":
+        return default_val
+    try:
+        m = re.search(r'[-+]?\d*\.?\d+', str(val))
+        if m:
+            num = float(m.group(0))
+            rounded = int(round(num))
+            return max(min_val, min(max_val, rounded))
+    except Exception:
+        pass
+    return default_val
+
+def extract_bio_data(hn=None, name=None, custom_folder=None):
+    folder = find_bio_folder(custom_folder)
+    if not folder:
+        return None, "ไม่พบโฟลเดอร์ผลตรวจ SA-3000P ในเครือข่ายหรือในเครื่อง"
+
+    apg_path = os.path.join(folder, "APGResult.xls")
+    hrv_path = os.path.join(folder, "HRVResult.xls")
+
+    apg_rows = parse_sa_tsv(apg_path)
+    hrv_rows = parse_sa_tsv(hrv_path)
+
+    if not apg_rows and not hrv_rows:
+        return None, f"ไม่พบไฟล์ผลตรวจ (APGResult.xls / HRVResult.xls) ใน {folder}"
+
+    target_apg = None
+    target_hrv = None
+    matched_by = "latest"
+
+    clean_hn = str(hn).strip() if hn else ""
+    clean_name = str(name).strip().lower() if name else ""
+
+    if clean_hn:
+        for r in reversed(apg_rows):
+            c_no = str(r.get("ChartNo", "") or r.get("ChartID", "")).strip()
+            if c_no == clean_hn:
+                target_apg = r
+                matched_by = "hn"
+                break
+        for r in reversed(hrv_rows):
+            c_no = str(r.get("ChartNo", "") or r.get("ChartID", "")).strip()
+            if c_no == clean_hn:
+                target_hrv = r
+                matched_by = "hn"
+                break
+
+    if not target_apg and not target_hrv and clean_name:
+        for r in reversed(apg_rows):
+            r_name = str(r.get("ชื่อ", "") or r.get("Name", "")).strip().lower()
+            if clean_name in r_name or r_name in clean_name:
+                target_apg = r
+                matched_by = "name"
+                break
+        for r in reversed(hrv_rows):
+            r_name = str(r.get("Name", "") or r.get("ชื่อ", "")).strip().lower()
+            if clean_name in r_name or r_name in clean_name:
+                target_hrv = r
+                matched_by = "name"
+                break
+
+    if not target_apg and apg_rows:
+        target_apg = apg_rows[-1]
+    if not target_hrv and hrv_rows:
+        target_hrv = hrv_rows[-1]
+
+    chart_no = ""
+    patient_name = ""
+    exam_date = ""
+
+    if target_apg:
+        chart_no = target_apg.get("ChartNo", "") or target_apg.get("ChartID", "")
+        patient_name = target_apg.get("ชื่อ", "") or target_apg.get("Name", "")
+        exam_date = target_apg.get("Exam.Date", "") or target_apg.get("Exam. Date", "")
+    elif target_hrv:
+        chart_no = target_hrv.get("ChartNo", "") or target_hrv.get("ChartID", "")
+        patient_name = target_hrv.get("Name", "") or target_hrv.get("ชื่อ", "")
+        exam_date = target_hrv.get("Exam.Date", "") or target_hrv.get("Exam. Date", "")
+
+    # Wave Level (1 - 7 ปิดแกปทศนิยมด้วยการปัดเศษ)
+    wave_level = 2
+    if target_apg and target_apg.get("Wave Type"):
+        wave_level = to_clean_int(target_apg.get("Wave Type"), default_val=2, min_val=1, max_val=7)
+
+    # Mean Heart Rate (ปิดแกปทศนิยมด้วยการปัดเศษ)
+    hr_str = ""
+    if target_apg and target_apg.get("HR"):
+        hr_str = target_apg.get("HR")
+    elif target_hrv and (target_hrv.get("HR") or target_hrv.get("MEANHRT-SUPINE")):
+        hr_str = target_hrv.get("HR") or target_hrv.get("MEANHRT-SUPINE")
+    mean_heart_rate = to_clean_int(hr_str, default_val=75, min_val=0, max_val=150)
+
+    # HRV parameters (แปลงและปัดเศษทศนิยมเป็นจำนวนเต็มตามมาตรฐานระบบ MSR)
+    ans_activity = 100
+    ans_balance = 40
+    stress_resistance = 100
+    stress_index = 85
+    fatigue_index = 80
+    electro_cardiac_stability = 95
+    ectopic_beat = 0
+
+    if target_hrv:
+        psi_val = target_hrv.get("PSI") or target_hrv.get("PSI-SUPINE")
+        if psi_val:
+            stress_index = to_clean_int(psi_val, default_val=85, min_val=50, max_val=150)
+        
+        sdnn_val = target_hrv.get("SDNN") or target_hrv.get("SDNN-SUPINE")
+        if sdnn_val:
+            try:
+                sdnn_num = float(sdnn_val)
+                ans_activity = to_clean_int(100 + (sdnn_num - 45) * 1.0, default_val=100, min_val=50, max_val=150)
+                stress_resistance = to_clean_int(100 + (sdnn_num - 45) * 0.8, default_val=100, min_val=50, max_val=150)
+            except Exception:
+                pass
+
+        lf_norm = target_hrv.get("LFNorm") or target_hrv.get("LFNORM-SUPINE")
+        if lf_norm:
+            try:
+                lf_val = float(lf_norm)
+                ans_balance = to_clean_int(abs(lf_val - 50) * 1.5, default_val=40, min_val=0, max_val=150)
+            except Exception:
+                pass
+
+        ec_val = target_hrv.get("Ectopic Beat") or target_hrv.get("ARTIFACT-SUPINE") or target_hrv.get("Ectopic Beat(Supine)")
+        if ec_val:
+            ectopic_beat = to_clean_int(ec_val, default_val=0, min_val=0, max_val=999)
+
+        # Check if direct score columns exist from new SA-3000P models
+        if target_hrv.get("ANS Activity"):
+            ans_activity = to_clean_int(target_hrv.get("ANS Activity"), default_val=ans_activity, min_val=50, max_val=150)
+        if target_hrv.get("ANS Balance"):
+            ans_balance = to_clean_int(target_hrv.get("ANS Balance"), default_val=ans_balance, min_val=0, max_val=150)
+        if target_hrv.get("Stress Resistance"):
+            stress_resistance = to_clean_int(target_hrv.get("Stress Resistance"), default_val=stress_resistance, min_val=50, max_val=150)
+        if target_hrv.get("Fatigue Index"):
+            fatigue_index = to_clean_int(target_hrv.get("Fatigue Index"), default_val=fatigue_index, min_val=50, max_val=150)
+        if target_hrv.get("Stability") or target_hrv.get("Electro-Cardiac Stability"):
+            electro_cardiac_stability = to_clean_int(target_hrv.get("Stability") or target_hrv.get("Electro-Cardiac Stability"), default_val=95, min_val=50, max_val=150)
+
+    result = {
+        "chart_no": chart_no,
+        "patient_name": patient_name,
+        "exam_date": exam_date,
+        "matched_by": matched_by,
+        "folder_path": folder,
+        "ans_activity": ans_activity,
+        "ans_balance": ans_balance,
+        "stress_resistance": stress_resistance,
+        "stress_index": stress_index,
+        "fatigue_index": fatigue_index,
+        "mean_heart_rate": mean_heart_rate,
+        "electro_cardiac_stability": electro_cardiac_stability,
+        "ectopic_beat": ectopic_beat,
+        "wave_level": wave_level,
+    }
+
+    return result, None
+
+@app.route('/read-bio')
+def read_bio():
+    hn = request.args.get('hn', '').strip()
+    name = request.args.get('name', '').strip()
+    folder = request.args.get('folder', '').strip()
+    
+    data, error = extract_bio_data(hn=hn, name=name, custom_folder=folder)
+    if error:
+        return jsonify({"success": False, "message": error}), 400
     return jsonify({"success": True, "data": data})
 
 if __name__ == "__main__":

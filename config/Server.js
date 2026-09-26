@@ -20,11 +20,22 @@ const serverConfig = {
   },
   middleware:{
     allowed_origins:[],
-    ui_session_bypass_paths:[],
+    ui_session_bypass_paths:[
+      '/uploads',
+      '/images',
+      '/msr/uploads',
+      '/msr/images',
+    ],
     api_session_bypass_paths:[
       '/api/auth/login',
       '/api/auth/thaid/login',
-      '/api/auth/thaid/callback'
+      '/api/auth/thaid/callback',
+      '/api/screening/bio/receive',
+      '/msr/api/screening/bio/receive',
+      '/api/screening/bio/images',
+      '/msr/api/screening/bio/images',
+      '/api/screening/bio/view-image',
+      '/msr/api/screening/bio/view-image',
     ],
     content_type_response:"application/json",
     allowed_request_content_types: [

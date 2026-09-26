@@ -4,6 +4,7 @@ import { useState, useRef, forwardRef, useImperativeHandle, useMemo } from "reac
 import Field from '@/components/common/Form/Field';
 import { useBioForm }from "@/hooks/useBioForm";
 import { Activity, Brain, BrainCog, HeartPulse, HeartCrack } from 'lucide-react';
+import BioReportViewer from '@/components/screening/Bio/BioReportViewer';
 const DetailBioForm = forwardRef(({ bioData, isEdit = false, disabledForm = true, onChangeFormBio }, ref) => {
 
     const {
@@ -386,6 +387,15 @@ const DetailBioForm = forwardRef(({ bioData, isEdit = false, disabledForm = true
                 </div>
               
               </div>
+
+              {/* ส่วนแสดงภาพรายงานผลตรวจ Biofeedback (DDR & APG) จากเครื่อง SA-3000P */}
+              <BioReportViewer
+                screeningId={bioData?.screenings?.screening_id}
+                hn={bioData?.hn}
+                initialDdrUrl={bioData?.screenings?.biofeedback?.ddr_image_url}
+                initialApgUrl={bioData?.screenings?.biofeedback?.apg_image_url}
+                isEdit={isEdit}
+              />
 
             </div>
 

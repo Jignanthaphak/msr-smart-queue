@@ -132,6 +132,23 @@ export const useBioForm = ( bioData, disabledForm = true, onChangeFormBio, conta
         if(disabledForm || isNotProcess.current) return;
         const { name } = e.target;
         setWarnFields(prev => ({ ...prev, [name]: null }));
+
+        // ปิดแกปกรณีมีทศนิยม: เมื่อหลุดโฟกัส ให้ปัดเศษเป็นจำนวนเต็มให้อัตโนมัติ
+        const scoreFields = [
+            "ans_activity", "ans_balance", "stress_resistance", "stress_index",
+            "fatigue_index", "mean_heart_rate", "electro_cardiac_stability",
+            "ectopic_beat", "wave_level"
+        ];
+        if (scoreFields.includes(name) && formData[name] !== undefined && formData[name] !== null) {
+            const currentStr = String(formData[name]).trim();
+            if (currentStr.includes('.')) {
+                const num = parseFloat(currentStr);
+                if (!isNaN(num)) {
+                    const rounded = Math.round(num);
+                    handleChange({ target: { name, value: String(rounded), type: 'text' } });
+                }
+            }
+        }
     };
 
     useEffect(() => {

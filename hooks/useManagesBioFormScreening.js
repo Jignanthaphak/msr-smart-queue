@@ -260,6 +260,43 @@ export function useManagesBioFormScreening() {
     }
   };
 
+  // ----------- รับข้อมูลจากเครื่องตรวจ Biofeedback (SA-3000P) -------------
+  const onReadBioSuccess = (bioResult) => {
+    if (!bioResult) return;
+
+    // 1. ปลดล็อคฟอร์มเข้าสู่โหมด editing และแสดงปุ่มบันทึก
+    setUIState(prev => ({
+      ...prev,
+      disabledForm: false,
+      mode: "editing",
+      btnState: 6, // 6: ปุ่มบันทึก + ยกเลิก
+    }));
+
+    // 2. อัปเดต bioData เพื่อให้ useBioForm คำนวณเกรดและสีอัตโนมัติ
+    setBioData(prev => {
+      const clone = cloneDeep(prev || {});
+      if (!clone.screenings) clone.screenings = {};
+      if (!clone.screenings.biofeedback) clone.screenings.biofeedback = {};
+
+      const bf = clone.screenings.biofeedback;
+      if (bioResult.ans_activity !== undefined) bf.ans_activity = bioResult.ans_activity;
+      if (bioResult.ans_balance !== undefined) bf.ans_balance = bioResult.ans_balance;
+      if (bioResult.stress_resistance !== undefined) bf.stress_resistance = bioResult.stress_resistance;
+      if (bioResult.stress_index !== undefined) bf.stress_index = bioResult.stress_index;
+      if (bioResult.fatigue_index !== undefined) bf.fatigue_index = bioResult.fatigue_index;
+      if (bioResult.mean_heart_rate !== undefined) bf.mean_heart_rate = bioResult.mean_heart_rate;
+      if (bioResult.electro_cardiac_stability !== undefined) bf.electro_cardiac_stability = bioResult.electro_cardiac_stability;
+      if (bioResult.ectopic_beat !== undefined) bf.ectopic_beat = bioResult.ectopic_beat;
+      if (bioResult.wave_level !== undefined) bf.wave_level = bioResult.wave_level;
+      if (bioResult.ddr_image_url) bf.ddr_image_url = bioResult.ddr_image_url;
+      if (bioResult.apg_image_url) bf.apg_image_url = bioResult.apg_image_url;
+
+      return clone;
+    });
+
+    message.success("ดึงข้อมูลจากเครื่อง SA-3000P สำเร็จ!");
+  };
+
   // ----------- return state & callbacks -------------
   // return ทั้งหมดให้ component ใช้งาน
   return {
@@ -273,5 +310,6 @@ export function useManagesBioFormScreening() {
     onClickBtnCallback,
     AlertComponent,
     resetFormState,
+    onReadBioSuccess,
   };
 }
