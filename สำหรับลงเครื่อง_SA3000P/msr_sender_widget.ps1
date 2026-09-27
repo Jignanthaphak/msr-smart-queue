@@ -63,14 +63,15 @@ $scoreRanges = @{
 
 # --- Create Form UI ---
 $screenH = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height
-$targetH = [Math]::Min(755, $screenH - 15)
+$targetH = [Math]::Min(720, [Math]::Max(460, $screenH - 15))
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "MSR Biofeedback Sender (SA-3000P -> MSR)"
-$form.Size = New-Object System.Drawing.Size(540, $targetH)
+$form.Size = New-Object System.Drawing.Size(545, $targetH)
+$form.MinimumSize = New-Object System.Drawing.Size(520, 420)
 $form.StartPosition = "CenterScreen"
-$form.FormBorderStyle = "FixedDialog"
-$form.MaximizeBox = $false
+$form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
+$form.MaximizeBox = $true
 $form.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
 $form.TopMost = $true
 
@@ -82,57 +83,62 @@ $fontScore = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.Font
 $fontRange = New-Object System.Drawing.Font("Segoe UI", 8.5, [System.Drawing.FontStyle]::Regular)
 $fontBtn   = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
 
+# --- TOP PANEL: Header & Patient Information (Dock = Top) ---
+$pnlTop = New-Object System.Windows.Forms.Panel
+$pnlTop.Dock = [System.Windows.Forms.DockStyle]::Top
+$pnlTop.Height = 108
+$pnlTop.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
+
 # Header (Clean Thai text)
 $lblHeader = New-Object System.Windows.Forms.Label
 $lblHeader.Text = "ส่งผลตรวจ Biofeedback เข้าสู่ระบบ MSR"
 $lblHeader.Font = $fontTitle
 $lblHeader.ForeColor = [System.Drawing.Color]::FromArgb(16, 149, 106)
-$lblHeader.Location = New-Object System.Drawing.Point(18, 10)
-$lblHeader.Size = New-Object System.Drawing.Size(490, 24)
-$form.Controls.Add($lblHeader)
+$lblHeader.Location = New-Object System.Drawing.Point(18, 8)
+$lblHeader.Size = New-Object System.Drawing.Size(490, 22)
+$pnlTop.Controls.Add($lblHeader)
 
 # Exam Date
 $lblExamDate = New-Object System.Windows.Forms.Label
 $lblExamDate.Text = "วันเวลาที่ตรวจ: กำลังค้นหาข้อมูลล่าสุด..."
 $lblExamDate.Font = $fontSub
 $lblExamDate.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
-$lblExamDate.Location = New-Object System.Drawing.Point(20, 35)
+$lblExamDate.Location = New-Object System.Drawing.Point(20, 32)
 $lblExamDate.Size = New-Object System.Drawing.Size(490, 18)
-$form.Controls.Add($lblExamDate)
+$pnlTop.Controls.Add($lblExamDate)
 
 # Patient Box (HN & Name with clean spacing)
 $lblHn = New-Object System.Windows.Forms.Label
 $lblHn.Text = "HN ผู้รับบริการ (Chart No):"
 $lblHn.Font = $fontBold
-$lblHn.Location = New-Object System.Drawing.Point(18, 56)
+$lblHn.Location = New-Object System.Drawing.Point(18, 54)
 $lblHn.Size = New-Object System.Drawing.Size(175, 18)
-$form.Controls.Add($lblHn)
+$pnlTop.Controls.Add($lblHn)
 
 $txtHn = New-Object System.Windows.Forms.TextBox
 $txtHn.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
-$txtHn.Location = New-Object System.Drawing.Point(18, 75)
+$txtHn.Location = New-Object System.Drawing.Point(18, 73)
 $txtHn.Size = New-Object System.Drawing.Size(165, 26)
-$form.Controls.Add($txtHn)
+$pnlTop.Controls.Add($txtHn)
 
 $lblName = New-Object System.Windows.Forms.Label
 $lblName.Text = "ชื่อ-นามสกุล ผู้รับบริการ:"
 $lblName.Font = $fontBold
-$lblName.Location = New-Object System.Drawing.Point(198, 56)
+$lblName.Location = New-Object System.Drawing.Point(198, 54)
 $lblName.Size = New-Object System.Drawing.Size(305, 18)
-$form.Controls.Add($lblName)
+$pnlTop.Controls.Add($lblName)
 
 $txtName = New-Object System.Windows.Forms.TextBox
 $txtName.Font = New-Object System.Drawing.Font("Segoe UI", 9.5, [System.Drawing.FontStyle]::Regular)
-$txtName.Location = New-Object System.Drawing.Point(198, 75)
+$txtName.Location = New-Object System.Drawing.Point(198, 73)
 $txtName.Size = New-Object System.Drawing.Size(305, 26)
-$form.Controls.Add($txtName)
+$pnlTop.Controls.Add($txtName)
 
-# --- Scrollable Panel for 4 Groups ---
+# --- SCROLLABLE PANEL FOR 4 GROUPS (Dock = Fill) ---
 $scrollPanel = New-Object System.Windows.Forms.Panel
-$scrollPanel.Location = New-Object System.Drawing.Point(14, 108)
-$scrollPanel.Size = New-Object System.Drawing.Size(502, 450)
+$scrollPanel.Dock = [System.Windows.Forms.DockStyle]::Fill
 $scrollPanel.AutoScroll = $true
-$form.Controls.Add($scrollPanel)
+$scrollPanel.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
 
 # Input controls dictionary
 $inputs = @{}
@@ -255,72 +261,80 @@ $scrollPanel.Controls.Add($grpWave)
 
 Add-CleanBioRow $grpWave "wave_level" 18
 
-# Bottom Controls Position
-$yBottom = 562
+# --- BOTTOM ACTION PANEL: Controls & Send Button (Dock = Bottom) ---
+$pnlBottom = New-Object System.Windows.Forms.Panel
+$pnlBottom.Dock = [System.Windows.Forms.DockStyle]::Bottom
+$pnlBottom.Height = 142
+$pnlBottom.BackColor = [System.Drawing.Color]::FromArgb(248, 250, 252)
 
 # Image Info Label
 $lblImageInfo = New-Object System.Windows.Forms.Label
 $lblImageInfo.Text = "ภาพรายงาน: กำลังค้นหาไฟล์ภาพ DDR และ APG..."
-$lblImageInfo.Location = New-Object System.Drawing.Point(16, $yBottom)
-$lblImageInfo.Size = New-Object System.Drawing.Size(498, 30)
+$lblImageInfo.Location = New-Object System.Drawing.Point(16, 2)
+$lblImageInfo.Size = New-Object System.Drawing.Size(498, 20)
 $lblImageInfo.Font = $fontSub
 $lblImageInfo.ForeColor = [System.Drawing.Color]::FromArgb(79, 70, 229)
-$form.Controls.Add($lblImageInfo)
+$pnlBottom.Controls.Add($lblImageInfo)
 
 # Buttons Row
 $btnScanAgain = New-Object System.Windows.Forms.Button
 $btnScanAgain.Text = "ดึงผลตรวจ (ตาม HN / ล่าสุด)"
-$btnScanAgain.Location = New-Object System.Drawing.Point(16, ($yBottom + 32))
-$btnScanAgain.Size = New-Object System.Drawing.Size(210, 32)
+$btnScanAgain.Location = New-Object System.Drawing.Point(16, 24)
+$btnScanAgain.Size = New-Object System.Drawing.Size(210, 30)
 $btnScanAgain.BackColor = [System.Drawing.Color]::FromArgb(238, 242, 255)
 $btnScanAgain.ForeColor = [System.Drawing.Color]::FromArgb(67, 56, 202)
 $btnScanAgain.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $btnScanAgain.Font = $fontBold
 $btnScanAgain.Cursor = [System.Windows.Forms.Cursors]::Hand
-$form.Controls.Add($btnScanAgain)
+$pnlBottom.Controls.Add($btnScanAgain)
 
 $btnClear = New-Object System.Windows.Forms.Button
 $btnClear.Text = "ล้างหน้าจอ"
-$btnClear.Location = New-Object System.Drawing.Point(232, ($yBottom + 32))
-$btnClear.Size = New-Object System.Drawing.Size(100, 32)
+$btnClear.Location = New-Object System.Drawing.Point(232, 24)
+$btnClear.Size = New-Object System.Drawing.Size(100, 30)
 $btnClear.BackColor = [System.Drawing.Color]::FromArgb(254, 242, 242)
 $btnClear.ForeColor = [System.Drawing.Color]::FromArgb(185, 28, 28)
 $btnClear.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $btnClear.Font = $fontBold
 $btnClear.Cursor = [System.Windows.Forms.Cursors]::Hand
-$form.Controls.Add($btnClear)
+$pnlBottom.Controls.Add($btnClear)
 
 $btnBrowseFolder = New-Object System.Windows.Forms.Button
 $btnBrowseFolder.Text = "เลือกโฟลเดอร์ภาพ..."
-$btnBrowseFolder.Location = New-Object System.Drawing.Point(338, ($yBottom + 32))
-$btnBrowseFolder.Size = New-Object System.Drawing.Size(176, 32)
+$btnBrowseFolder.Location = New-Object System.Drawing.Point(338, 24)
+$btnBrowseFolder.Size = New-Object System.Drawing.Size(176, 30)
 $btnBrowseFolder.BackColor = [System.Drawing.Color]::FromArgb(241, 245, 249)
 $btnBrowseFolder.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $btnBrowseFolder.Font = $fontBold
 $btnBrowseFolder.Cursor = [System.Windows.Forms.Cursors]::Hand
-$form.Controls.Add($btnBrowseFolder)
+$pnlBottom.Controls.Add($btnBrowseFolder)
 
 # Status Label
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.Text = "พร้อมส่งข้อมูลเข้าสู่ระบบ MSR"
 $lblStatus.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-$lblStatus.Location = New-Object System.Drawing.Point(16, ($yBottom + 67))
+$lblStatus.Location = New-Object System.Drawing.Point(16, 56)
 $lblStatus.Size = New-Object System.Drawing.Size(498, 18)
 $lblStatus.Font = $fontSub
 $lblStatus.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
-$form.Controls.Add($lblStatus)
+$pnlBottom.Controls.Add($lblStatus)
 
 # Big Send Button
 $btnSend = New-Object System.Windows.Forms.Button
 $btnSend.Text = "ส่งผลตรวจและภาพรายงานเข้าสู่ระบบ MSR"
 $btnSend.Font = $fontBtn
-$btnSend.Location = New-Object System.Drawing.Point(16, ($yBottom + 88))
-$btnSend.Size = New-Object System.Drawing.Size(498, 48)
+$btnSend.Location = New-Object System.Drawing.Point(16, 76)
+$btnSend.Size = New-Object System.Drawing.Size(498, 46)
 $btnSend.BackColor = [System.Drawing.Color]::FromArgb(16, 149, 106)
 $btnSend.ForeColor = [System.Drawing.Color]::White
 $btnSend.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $btnSend.Cursor = [System.Windows.Forms.Cursors]::Hand
-$form.Controls.Add($btnSend)
+$pnlBottom.Controls.Add($btnSend)
+
+# Add docked panels in correct WinForms z-order: Fill first, then Bottom, then Top
+$form.Controls.Add($scrollPanel)
+$form.Controls.Add($pnlBottom)
+$form.Controls.Add($pnlTop)
 
 # --- Scanner & Parser Logic (Smart Hybrid: Auto Latest or Search by HN) ---
 $activeDdrImage = $null
