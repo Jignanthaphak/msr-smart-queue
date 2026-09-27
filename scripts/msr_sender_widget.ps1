@@ -271,7 +271,7 @@ $form.Controls.Add($lblImageInfo)
 $btnScanAgain = New-Object System.Windows.Forms.Button
 $btnScanAgain.Text = "ดึงผลตรวจ (ตาม HN / ล่าสุด)"
 $btnScanAgain.Location = New-Object System.Drawing.Point(16, ($yBottom + 32))
-$btnScanAgain.Size = New-Object System.Drawing.Size(250, 32)
+$btnScanAgain.Size = New-Object System.Drawing.Size(210, 32)
 $btnScanAgain.BackColor = [System.Drawing.Color]::FromArgb(238, 242, 255)
 $btnScanAgain.ForeColor = [System.Drawing.Color]::FromArgb(67, 56, 202)
 $btnScanAgain.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -279,10 +279,21 @@ $btnScanAgain.Font = $fontBold
 $btnScanAgain.Cursor = [System.Windows.Forms.Cursors]::Hand
 $form.Controls.Add($btnScanAgain)
 
+$btnClear = New-Object System.Windows.Forms.Button
+$btnClear.Text = "ล้างหน้าจอ"
+$btnClear.Location = New-Object System.Drawing.Point(232, ($yBottom + 32))
+$btnClear.Size = New-Object System.Drawing.Size(100, 32)
+$btnClear.BackColor = [System.Drawing.Color]::FromArgb(254, 242, 242)
+$btnClear.ForeColor = [System.Drawing.Color]::FromArgb(185, 28, 28)
+$btnClear.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnClear.Font = $fontBold
+$btnClear.Cursor = [System.Windows.Forms.Cursors]::Hand
+$form.Controls.Add($btnClear)
+
 $btnBrowseFolder = New-Object System.Windows.Forms.Button
 $btnBrowseFolder.Text = "เลือกโฟลเดอร์ภาพ..."
-$btnBrowseFolder.Location = New-Object System.Drawing.Point(274, ($yBottom + 32))
-$btnBrowseFolder.Size = New-Object System.Drawing.Size(240, 32)
+$btnBrowseFolder.Location = New-Object System.Drawing.Point(338, ($yBottom + 32))
+$btnBrowseFolder.Size = New-Object System.Drawing.Size(176, 32)
 $btnBrowseFolder.BackColor = [System.Drawing.Color]::FromArgb(241, 245, 249)
 $btnBrowseFolder.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $btnBrowseFolder.Font = $fontBold
@@ -315,11 +326,37 @@ $form.Controls.Add($btnSend)
 $activeDdrImage = $null
 $activeApgImage = $null
 
+function Clear-FormFields() {
+    $script:activeDdrImage = $null
+    $script:activeApgImage = $null
+    $txtHn.Text = ""
+    $txtName.Text = ""
+    $lblExamDate.Text = "วันเวลาที่ตรวจ: -"
+    foreach ($k in $inputs.Keys) {
+        $inputs[$k].Text = ""
+    }
+    foreach ($k in $warnLabels.Keys) {
+        $warnLabels[$k].Text = ""
+    }
+    $lblImageInfo.Text = "ยังไม่พบภาพรายงานในโฟลเดอร์ Image (รอผลตรวจใหม่ หรือพิมพ์ค้นหาตาม HN)"
+    $lblImageInfo.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
+    $lblStatus.Text = "พร้อมรับข้อมูลเคสใหม่ (เมื่อตรวจเสร็จ ข้อมูลจะดึงมาแสดงอัตโนมัติค่ะ)"
+    $lblStatus.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
+}
+
 function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
     $script:activeDdrImage = $null
     $script:activeApgImage = $null
 
     $targetHn = if ($searchHn) { $searchHn.Trim() } else { $txtHn.Text.Trim() }
+
+    # หากมีการระบุ HN ให้เคลียร์ชื่อและค่าผลตรวจเดิมออกก่อน
+    if ($targetHn) {
+        $txtName.Text = ""
+        $lblExamDate.Text = "วันเวลาที่ตรวจ: -"
+        foreach ($k in $inputs.Keys) { $inputs[$k].Text = "" }
+        foreach ($k in $warnLabels.Keys) { $warnLabels[$k].Text = "" }
+    }
 
     $extraDirs = @()
     if ($customFolder -and (Test-Path $customFolder)) {
@@ -405,6 +442,12 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
         }
     }
 
+    # กรณีไม่ได้ระบุ HN และไม่พบภาพรายงานใดๆ ในโฟลเดอร์ ให้คงหน้าจอว่างเปล่า (ห้ามไปดึงข้อมูลค้างเก่าจาก Excel เด็ดขาด)
+    if (!$targetHn -and !$script:activeDdrImage -and !$script:activeApgImage) {
+        Clear-FormFields
+        return
+    }
+
     # 2. Update Image info Label
     if ($script:activeDdrImage -or $script:activeApgImage) {
         $ddrName = if ($script:activeDdrImage) { $script:activeDdrImage.Name } else { "ไม่พบ" }
@@ -420,99 +463,113 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
         $lblImageInfo.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
     }
 
-    # 3. Read exact scores from Excel files
+    # หากพบภาพ DDR ให้ดึงข้อมูล HN, ชื่อ และวันเวลาจากชื่อไฟล์ภาพทันที และล็อก targetHn ให้ค้นหา Excel เฉพาะ HN นี้
+    if ($script:activeDdrImage -and $script:activeDdrImage.Name -match "^(\d+)_([A-Za-z0-9]+)_(\d{8})(\d{4})") {
+        $imgHn = $matches[1]
+        $imgName = $matches[2]
+        $dStr = $matches[3]
+        $tStr = $matches[4]
+        
+        $txtHn.Text = $imgHn
+        if (!$txtName.Text -or $txtName.Text -eq "-") { $txtName.Text = $imgName }
+        $lblExamDate.Text = "วันเวลาที่ตรวจ: " + $dStr.Substring(6,2) + "/" + $dStr.Substring(4,2) + "/" + $dStr.Substring(0,4) + " " + $tStr.Substring(0,2) + ":" + $tStr.Substring(2,2) + " (จากภาพ DDR)"
+        $targetHn = $imgHn
+    }
+
+    # 3. Read exact scores from Excel files (ค้นหาเฉพาะเมื่อมี targetHn ที่ชัดเจน)
     $hasExcelScores = $false
-    foreach ($dir in $candidateDirs) {
-        # Check HRVResult
-        $hrvFiles = Get-ChildItem -Path $dir -Filter "*HRVResult*.xls" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
-        if ($hrvFiles -and $hrvFiles.Count -gt 0) {
-            $lines = Get-Content $hrvFiles[0].FullName -Encoding Unicode -ErrorAction SilentlyContinue
-            if (!$lines -or $lines.Count -lt 2) {
-                $lines = Get-Content $hrvFiles[0].FullName -Encoding UTF8 -ErrorAction SilentlyContinue
-            }
-            if ($lines -and $lines.Count -ge 2) {
-                $headers = $lines[0].Split("`t") | ForEach-Object { $_.Trim().Trim([char]0xFEFF) }
-
-                # If targetHn is given, search matching row; otherwise take the last row
-                $targetRow = $null
-                for ($rIdx = $lines.Count - 1; $rIdx -ge 1; $rIdx--) {
-                    $rowCols = $lines[$rIdx].Split("`t")
-                    if ($rowCols.Count -gt 0) {
-                        $chartNo = $rowCols[0].Trim()
-                        if (!$targetHn -or $chartNo -eq $targetHn) {
-                            $targetRow = $rowCols
-                            break
-                        }
-                    }
+    if ($targetHn) {
+        foreach ($dir in $candidateDirs) {
+            # Check HRVResult
+            $hrvFiles = Get-ChildItem -Path $dir -Filter "*HRVResult*.xls" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
+            if ($hrvFiles -and $hrvFiles.Count -gt 0) {
+                $lines = Get-Content $hrvFiles[0].FullName -Encoding Unicode -ErrorAction SilentlyContinue
+                if (!$lines -or $lines.Count -lt 2) {
+                    $lines = Get-Content $hrvFiles[0].FullName -Encoding UTF8 -ErrorAction SilentlyContinue
                 }
+                if ($lines -and $lines.Count -ge 2) {
+                    $headers = $lines[0].Split("`t") | ForEach-Object { $_.Trim().Trim([char]0xFEFF) }
 
-                if ($targetRow) {
-                    for ($i = 0; $i -lt $headers.Count; $i++) {
-                        $h = $headers[$i]
-                        $val = if ($i -lt $targetRow.Count) { $targetRow[$i].Trim() } else { "" }
-                        
-                        if ($h -eq "ChartNo" -and $val) { $txtHn.Text = $val }
-                        if ($h -eq "ชื่อ" -and $val -and (!$txtName.Text -or $txtName.Text -eq "-")) { $txtName.Text = $val }
-                        if ($h -eq "Exam.Date" -and $val) {
-                            $lblExamDate.Text = "วันเวลาที่ตรวจ: $val (จากไฟล์รายงาน)"
-                        }
-
-                        # Filter: Only accept columns where value is NUMERIC (skipping 'ปกติ', 'ไม่สมดุล', etc.)
-                        if ($val -match "^\s*[-+]?\d+(\.\d+)?\s*$") {
-                            $intVal = [string][int][Math]::Round([double]$matches[0])
-
-                            if ($h -match "^การทำงานของระบบประสาทอัตโนมัติ|^ANS Activity$") { $inputs["ans_activity"].Text = $intVal; $hasExcelScores = $true }
-                            elseif ($h -match "^ความสมดุลของระบบประสาทอัตโนมัติ|^ANS Balance$") { $inputs["ans_balance"].Text = $intVal; $hasExcelScores = $true }
-                            elseif ($h -match "^ความทนทานต่อความเครียด|^Stress Resistance$") { $inputs["stress_resistance"].Text = $intVal; $hasExcelScores = $true }
-                            elseif ($h -match "^ระดับความเครียด$|^Stress Index$") { $inputs["stress_index"].Text = $intVal; $hasExcelScores = $true }
-                            elseif ($h -match "^ระดับความเหนื่อยล้า$|^Fatigue Index$") { $inputs["fatigue_index"].Text = $intVal; $hasExcelScores = $true }
-                            elseif ($h -match "^อัตราการเต้นของหัวใจเฉลี่ย$|^Mean Heart Rate$|^Mean HR$") { $inputs["mean_heart_rate"].Text = $intVal }
-                            elseif ($h -match "^ความเสถียรไฟฟ้าหัวใจ$|^ค่าเสถียรไฟฟ้าหัวใจ$|^Electro-Cardiac Stability$|^Stability$") { $inputs["electro_cardiac_stability"].Text = $intVal; $hasExcelScores = $true }
-                            elseif ($h -match "^การเต้นหัวใจผิดจังหวะ$|^Ectopic Beat$") { $inputs["ectopic_beat"].Text = $intVal }
-                        }
-                    }
-                }
-            }
-        }
-
-        # Check APGResult
-        $apgFiles = Get-ChildItem -Path $dir -Filter "*APGResult*.xls" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
-        if ($apgFiles -and $apgFiles.Count -gt 0) {
-            $lines = Get-Content $apgFiles[0].FullName -Encoding Unicode -ErrorAction SilentlyContinue
-            if (!$lines -or $lines.Count -lt 2) {
-                $lines = Get-Content $apgFiles[0].FullName -Encoding UTF8 -ErrorAction SilentlyContinue
-            }
-            if ($lines -and $lines.Count -ge 2) {
-                $headers = $lines[0].Split("`t") | ForEach-Object { $_.Trim().Trim([char]0xFEFF) }
-
-                $targetRow = $null
-                for ($rIdx = $lines.Count - 1; $rIdx -ge 1; $rIdx--) {
-                    $rowCols = $lines[$rIdx].Split("`t")
-                    if ($rowCols.Count -gt 0) {
-                        $chartNo = $rowCols[0].Trim()
-                        if (!$targetHn -or $chartNo -eq $targetHn) {
-                            $targetRow = $rowCols
-                            break
-                        }
-                    }
-                }
-
-                if ($targetRow) {
-                    for ($i = 0; $i -lt $headers.Count; $i++) {
-                        $h = $headers[$i]
-                        $val = if ($i -lt $targetRow.Count) { $targetRow[$i].Trim() } else { "" }
-
-                        if ($h -match "Wave Type") {
-                            if ($val -match "ระดับ\s*(\d+)") {
-                                $inputs["wave_level"].Text = $matches[1]
-                                $hasExcelScores = $true
-                            } elseif ($val -match "\b([1-7])\b") {
-                                $inputs["wave_level"].Text = $matches[1]
-                                $hasExcelScores = $true
+                    # ค้นหาแถวที่ ChartNo ตรงกับ $targetHn เท่านั้น (ไม่สุ่มเอาแถวสุดท้าย)
+                    $targetRow = $null
+                    for ($rIdx = $lines.Count - 1; $rIdx -ge 1; $rIdx--) {
+                        $rowCols = $lines[$rIdx].Split("`t")
+                        if ($rowCols.Count -gt 0) {
+                            $chartNo = $rowCols[0].Trim()
+                            if ($chartNo -eq $targetHn) {
+                                $targetRow = $rowCols
+                                break
                             }
                         }
-                        if ($h -eq "HR" -and $val -match "^\s*\d+\s*$" -and !$inputs["mean_heart_rate"].Text) {
-                            $inputs["mean_heart_rate"].Text = [string][int]$val.Trim()
+                    }
+
+                    if ($targetRow) {
+                        for ($i = 0; $i -lt $headers.Count; $i++) {
+                            $h = $headers[$i]
+                            $val = if ($i -lt $targetRow.Count) { $targetRow[$i].Trim() } else { "" }
+                            
+                            if ($h -eq "ChartNo" -and $val) { $txtHn.Text = $val }
+                            if ($h -eq "ชื่อ" -and $val -and (!$txtName.Text -or $txtName.Text -eq "-")) { $txtName.Text = $val }
+                            if ($h -eq "Exam.Date" -and $val) {
+                                $lblExamDate.Text = "วันเวลาที่ตรวจ: $val (จากไฟล์รายงาน)"
+                            }
+
+                            if ($val -match "^\s*[-+]?\d+(\.\d+)?\s*$") {
+                                $intVal = [string][int][Math]::Round([double]$matches[0])
+
+                                if ($h -match "^การทำงานของระบบประสาทอัตโนมัติ|^ANS Activity$") { $inputs["ans_activity"].Text = $intVal; $hasExcelScores = $true }
+                                elseif ($h -match "^ความสมดุลของระบบประสาทอัตโนมัติ|^ANS Balance$") { $inputs["ans_balance"].Text = $intVal; $hasExcelScores = $true }
+                                elseif ($h -match "^ความทนทานต่อความเครียด|^Stress Resistance$") { $inputs["stress_resistance"].Text = $intVal; $hasExcelScores = $true }
+                                elseif ($h -match "^ระดับความเครียด$|^Stress Index$") { $inputs["stress_index"].Text = $intVal; $hasExcelScores = $true }
+                                elseif ($h -match "^ระดับความเหนื่อยล้า$|^Fatigue Index$") { $inputs["fatigue_index"].Text = $intVal; $hasExcelScores = $true }
+                                elseif ($h -match "^อัตราการเต้นของหัวใจเฉลี่ย$|^Mean Heart Rate$|^Mean HR$") { $inputs["mean_heart_rate"].Text = $intVal }
+                                elseif ($h -match "^ความเสถียรไฟฟ้าหัวใจ$|^ค่าเสถียรไฟฟ้าหัวใจ$|^Electro-Cardiac Stability$|^Stability$") { $inputs["electro_cardiac_stability"].Text = $intVal; $hasExcelScores = $true }
+                                elseif ($h -match "^การเต้นหัวใจผิดจังหวะ$|^Ectopic Beat$") { $inputs["ectopic_beat"].Text = $intVal }
+                            }
+                        }
+                    }
+                }
+            }
+
+            # Check APGResult
+            $apgFiles = Get-ChildItem -Path $dir -Filter "*APGResult*.xls" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending
+            if ($apgFiles -and $apgFiles.Count -gt 0) {
+                $lines = Get-Content $apgFiles[0].FullName -Encoding Unicode -ErrorAction SilentlyContinue
+                if (!$lines -or $lines.Count -lt 2) {
+                    $lines = Get-Content $apgFiles[0].FullName -Encoding UTF8 -ErrorAction SilentlyContinue
+                }
+                if ($lines -and $lines.Count -ge 2) {
+                    $headers = $lines[0].Split("`t") | ForEach-Object { $_.Trim().Trim([char]0xFEFF) }
+
+                    $targetRow = $null
+                    for ($rIdx = $lines.Count - 1; $rIdx -ge 1; $rIdx--) {
+                        $rowCols = $lines[$rIdx].Split("`t")
+                        if ($rowCols.Count -gt 0) {
+                            $chartNo = $rowCols[0].Trim()
+                            if ($chartNo -eq $targetHn) {
+                                $targetRow = $rowCols
+                                break
+                            }
+                        }
+                    }
+
+                    if ($targetRow) {
+                        for ($i = 0; $i -lt $headers.Count; $i++) {
+                            $h = $headers[$i]
+                            $val = if ($i -lt $targetRow.Count) { $targetRow[$i].Trim() } else { "" }
+
+                            if ($h -match "Wave Type") {
+                                if ($val -match "ระดับ\s*(\d+)") {
+                                    $inputs["wave_level"].Text = $matches[1]
+                                    $hasExcelScores = $true
+                                } elseif ($val -match "\b([1-7])\b") {
+                                    $inputs["wave_level"].Text = $matches[1]
+                                    $hasExcelScores = $true
+                                }
+                            }
+                            if ($h -eq "HR" -and $val -match "^\s*\d+\s*$" -and !$inputs["mean_heart_rate"].Text) {
+                                $inputs["mean_heart_rate"].Text = [string][int]$val.Trim()
+                            }
                         }
                     }
                 }
@@ -598,8 +655,8 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
         }
     }
 
-    # ค่าเริ่มต้นสำหรับ Ectopic Beat (การเต้นผิดจังหวะ) หากว่าง ให้เป็น 0
-    if (!$inputs["ectopic_beat"].Text) {
+    # ค่าเริ่มต้นสำหรับ Ectopic Beat (การเต้นผิดจังหวะ) หากมีข้อมูลเคส แต่ยังว่าง ให้เป็น 0
+    if (($hasExcelScores -or $script:activeDdrImage -or $script:activeApgImage) -and !$inputs["ectopic_beat"].Text) {
         $inputs["ectopic_beat"].Text = "0"
     }
 
@@ -608,16 +665,16 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
         Validate-FieldValue $k
     }
 
-    if ($hasExcelScores) {
-        $foundMsg = if ($targetHn) { "ดึงผลของ HN: $targetHn สำเร็จเรียบร้อยค่ะ" } else { "ดึงผลตรวจล่าสุดสำเร็จเรียบร้อยค่ะ" }
+    if ($hasExcelScores -or $script:activeDdrImage) {
+        $foundMsg = if ($targetHn) { "ดึงผลตรวจของ HN: $targetHn สำเร็จเรียบร้อยค่ะ" } else { "ดึงผลตรวจล่าสุดสำเร็จเรียบร้อยค่ะ" }
         $lblStatus.Text = $foundMsg
         $lblStatus.ForeColor = [System.Drawing.Color]::FromArgb(16, 149, 106)
     } else {
         if ($targetHn) {
-            $lblStatus.Text = "ไม่พบข้อมูลผลตรวจของ HN: $targetHn ค่ะ"
+            $lblStatus.Text = "ไม่พบข้อมูลผลตรวจของ HN: $targetHn ในระบบค่ะ"
             $lblStatus.ForeColor = [System.Drawing.Color]::FromArgb(220, 38, 38)
         } else {
-            $lblStatus.Text = "ตรวจพบข้อมูล สามารถตรวจสอบตัวเลขแล้วกดส่งได้เลยค่ะ"
+            $lblStatus.Text = "พร้อมรับข้อมูลเคสใหม่ (เมื่อตรวจเสร็จ ข้อมูลจะดึงมาแสดงอัตโนมัติค่ะ)"
             $lblStatus.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
         }
     }
@@ -629,6 +686,11 @@ Scan-AllData
 # Button: Re-scan / Search by HN
 $btnScanAgain.Add_Click({
     Scan-AllData "" $txtHn.Text.Trim()
+})
+
+# Button: Clear Screen
+$btnClear.Add_Click({
+    Clear-FormFields
 })
 
 # Press Enter on HN box to search
