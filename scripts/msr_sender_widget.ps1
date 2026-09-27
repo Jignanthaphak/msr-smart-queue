@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # MSR Biofeedback Sender Widget (Smart Hybrid Edition v4.3)
 # สำหรับติดตั้งบนหน้าจอเครื่องตรวจ Medicore SA-3000P ศูนย์สุขภาพจิตที่ 4
 # ระบบค้นหาอัจฉริยะ (ดึงเคสล่าสุดอัตโนมัติ หรือพิมพ์ค้นหาตาม HN)
@@ -362,27 +362,40 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
         $foundDdr = $null
         $foundApg = $null
 
-        # แยกตามกลุ่มชื่อไฟล์ (รองรับทั้งระบบที่มี 2 หน้า และ 3 หน้า)
+        # แยกตามกลุ่มชื่อไฟล์ (รองรับทั้งระบบที่มี 2 หน้า และ 3 หน้า, ชื่อ DDR, PTG หรือ APG)
         $fNamedDdr = $jpgs | Where-Object { $_.Name -match "ddr" } | Select-Object -First 1
-        $fNamedApg = $jpgs | Where-Object { $_.Name -match "apg" } | Select-Object -First 1
-        $f3 = $jpgs | Where-Object { $_.Name -match "\(3\)\.jpe?g$" } | Select-Object -First 1
-        $f2 = $jpgs | Where-Object { $_.Name -match "\(2\)\.jpe?g$" } | Select-Object -First 1
-        $fMain = $jpgs | Where-Object { $_.Name -notmatch "\(\d+\)\.jpe?g$" } | Select-Object -First 1
+        $fMain = $jpgs | Where-Object { $_.Name -notmatch "\(\d+\)\.jpe?g$" -and $_.Name -notmatch "(?:ptg|apg)" } | Select-Object -First 1
+        $foundDdr = if ($fNamedDdr) { $fNamedDdr } else { $fMain }
 
-        # DDR คือไฟล์หลัก (ไม่มีเลขวงเล็บ) หรือไฟล์ที่มีคำว่า ddr
-        if ($fNamedDdr) {
-            $foundDdr = $fNamedDdr
-        } else {
-            $foundDdr = $fMain
+        if ($foundDdr) {
+            # ดึงคำนำหน้าหลักของชื่อไฟล์เพื่อจับคู่ภาพของเคสเดียวกัน เช่น "51_Suthawan_20260927121600"
+            $casePrefix = $foundDdr.BaseName -replace "(?:_ddr|_ptg|_apg|\(\d+\))$", ""
+            $candidateApgs = $jpgs | Where-Object { 
+                $_.FullName -ne $foundDdr.FullName -and ($_.BaseName -like "$casePrefix*" -or $_.Name -match "^$casePrefix")
+            }
+
+            # ลำดับความสำคัญของภาพสภาวะหลอดเลือด (PTG / APG):
+            # 1. มีคำว่า ptg หรือ apg ในชื่อไฟล์
+            # 2. มี (3) ต่อท้าย (ระบบ 3 หน้า)
+            # 3. มี (2) ต่อท้าย (ระบบ 2 หน้าของ SA THAI)
+            $foundApg = $candidateApgs | Where-Object { $_.Name -match "(?:ptg|apg)" } | Select-Object -First 1
+            if (!$foundApg) {
+                $foundApg = $candidateApgs | Where-Object { $_.Name -match "\(3\)\.jpe?g$" } | Select-Object -First 1
+            }
+            if (!$foundApg) {
+                $foundApg = $candidateApgs | Where-Object { $_.Name -match "\(2\)\.jpe?g$" } | Select-Object -First 1
+            }
         }
 
-        # APG คือไฟล์ที่มีคำว่า apg หรือ (3) หรือ (2) เช่นใน SA THAI ที่มี 2 หน้า
-        if ($fNamedApg) {
-            $foundApg = $fNamedApg
-        } elseif ($f3) {
-            $foundApg = $f3
-        } elseif ($f2) {
-            $foundApg = $f2
+        # กรณีไฟล์เดี่ยวหรือชื่อไม่ตรงแพทเทิร์นข้างต้น ให้ค้นหาแบบ fallback
+        if (!$foundDdr) {
+            $foundDdr = $jpgs | Where-Object { $_.Name -match "ddr" } | Select-Object -First 1
+            if (!$foundDdr) { $foundDdr = $jpgs | Where-Object { $_.Name -notmatch "\(\d+\)\.jpe?g$" } | Select-Object -First 1 }
+        }
+        if (!$foundApg) {
+            $foundApg = $jpgs | Where-Object { $_.Name -match "(?:ptg|apg)" } | Select-Object -First 1
+            if (!$foundApg) { $foundApg = $jpgs | Where-Object { $_.Name -match "\(3\)\.jpe?g$" } | Select-Object -First 1 }
+            if (!$foundApg) { $foundApg = $jpgs | Where-Object { $_.Name -match "\(2\)\.jpe?g$" } | Select-Object -First 1 }
         }
 
         if ($foundDdr -or $foundApg) {
@@ -396,7 +409,7 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
     if ($script:activeDdrImage -or $script:activeApgImage) {
         $ddrName = if ($script:activeDdrImage) { $script:activeDdrImage.Name } else { "ไม่พบ" }
         $apgName = if ($script:activeApgImage) { $script:activeApgImage.Name } else { "ไม่พบ" }
-        $lblImageInfo.Text = "ภาพรายงาน: DDR ($ddrName) | APG ($apgName)"
+        $lblImageInfo.Text = "ภาพรายงาน: DDR ($ddrName) | PTG/APG ($apgName)"
         $lblImageInfo.ForeColor = [System.Drawing.Color]::FromArgb(16, 149, 106)
     } else {
         if ($targetHn) {

@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # SA-3000P Auto Image & OCR Background Sync to MSR System
 # Medicore SA-3000P -> MSR System (Mental Health Center 4)
 # ==============================================================================
@@ -53,8 +53,8 @@ Write-Host "Server API : $ServerUrl"
 Write-Host "Status     : Background watcher active... (Press Ctrl+C to stop)`n"
 
 $candidateImageDirs = @(
-    "C:\SAViewer_New THAI\Image",
     "C:\SA THAI\Image",
+    "C:\SAViewer_New THAI\Image",
     "D:\OneDrive\แฟรชไดรฟ\1",
     "D:\OneDrive\แฟรชไดรฟ\SAViewer_New THAI\Image",
     "D:\SAViewer_New THAI\Image",
@@ -73,15 +73,35 @@ while ($true) {
             $foundDdr = $null
             $foundApg = $null
 
-            # แยกตามกลุ่มชื่อไฟล์ (รองรับทั้งระบบที่มี 2 หน้า และ 3 หน้า)
+            # แยกตามกลุ่มชื่อไฟล์ (รองรับทั้งระบบที่มี 2 หน้า และ 3 หน้า, ชื่อ DDR, PTG หรือ APG)
             $fNamedDdr = $jpgs | Where-Object { $_.Name -match "ddr" } | Select-Object -First 1
-            $fNamedApg = $jpgs | Where-Object { $_.Name -match "apg" } | Select-Object -First 1
-            $f3 = $jpgs | Where-Object { $_.Name -match "\(3\)\.jpe?g$" } | Select-Object -First 1
-            $f2 = $jpgs | Where-Object { $_.Name -match "\(2\)\.jpe?g$" } | Select-Object -First 1
-            $fMain = $jpgs | Where-Object { $_.Name -notmatch "\(\d+\)\.jpe?g$" } | Select-Object -First 1
+            $fMain = $jpgs | Where-Object { $_.Name -notmatch "\(\d+\)\.jpe?g$" -and $_.Name -notmatch "(?:ptg|apg)" } | Select-Object -First 1
+            $foundDdr = if ($fNamedDdr) { $fNamedDdr } else { $fMain }
 
-            if ($fNamedDdr) { $foundDdr = $fNamedDdr } else { $foundDdr = $fMain }
-            if ($fNamedApg) { $foundApg = $fNamedApg } elseif ($f3) { $foundApg = $f3 } elseif ($f2) { $foundApg = $f2 }
+            if ($foundDdr) {
+                $casePrefix = $foundDdr.BaseName -replace "(?:_ddr|_ptg|_apg|\(\d+\))$", ""
+                $candidateApgs = $jpgs | Where-Object { 
+                    $_.FullName -ne $foundDdr.FullName -and ($_.BaseName -like "$casePrefix*" -or $_.Name -match "^$casePrefix")
+                }
+
+                $foundApg = $candidateApgs | Where-Object { $_.Name -match "(?:ptg|apg)" } | Select-Object -First 1
+                if (!$foundApg) {
+                    $foundApg = $candidateApgs | Where-Object { $_.Name -match "\(3\)\.jpe?g$" } | Select-Object -First 1
+                }
+                if (!$foundApg) {
+                    $foundApg = $candidateApgs | Where-Object { $_.Name -match "\(2\)\.jpe?g$" } | Select-Object -First 1
+                }
+            }
+
+            if (!$foundDdr) {
+                $foundDdr = $jpgs | Where-Object { $_.Name -match "ddr" } | Select-Object -First 1
+                if (!$foundDdr) { $foundDdr = $jpgs | Where-Object { $_.Name -notmatch "\(\d+\)\.jpe?g$" } | Select-Object -First 1 }
+            }
+            if (!$foundApg) {
+                $foundApg = $jpgs | Where-Object { $_.Name -match "(?:ptg|apg)" } | Select-Object -First 1
+                if (!$foundApg) { $foundApg = $jpgs | Where-Object { $_.Name -match "\(3\)\.jpe?g$" } | Select-Object -First 1 }
+                if (!$foundApg) { $foundApg = $jpgs | Where-Object { $_.Name -match "\(2\)\.jpe?g$" } | Select-Object -First 1 }
+            }
 
             if ($foundDdr) {
                 $uniqueKey = "$($foundDdr.FullName)_$($foundDdr.LastWriteTime.Ticks)"
