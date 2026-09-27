@@ -334,13 +334,14 @@ function Clear-FormFields() {
     $lblExamDate.Text = "วันเวลาที่ตรวจ: -"
     foreach ($k in $inputs.Keys) {
         $inputs[$k].Text = ""
+        $inputs[$k].BackColor = [System.Drawing.Color]::White
     }
     foreach ($k in $warnLabels.Keys) {
         $warnLabels[$k].Text = ""
     }
-    $lblImageInfo.Text = "ยังไม่พบภาพรายงานในโฟลเดอร์ Image (รอผลตรวจใหม่ หรือพิมพ์ค้นหาตาม HN)"
+    $lblImageInfo.Text = "ยังไม่ได้เลือกเคส (พิมพ์ HN แล้วกด Enter หรือคลิก 'ดึงผลตรวจ' ได้ค่ะ)"
     $lblImageInfo.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
-    $lblStatus.Text = "พร้อมรับข้อมูลเคสใหม่ (เมื่อตรวจเสร็จ ข้อมูลจะดึงมาแสดงอัตโนมัติค่ะ)"
+    $lblStatus.Text = "พร้อมใช้งาน: ระบุ HN แล้วกด Enter หรือคลิก 'ดึงผลตรวจ' ได้เลยค่ะ"
     $lblStatus.ForeColor = [System.Drawing.Color]::FromArgb(100, 116, 139)
 }
 
@@ -350,12 +351,15 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
 
     $targetHn = if ($searchHn) { $searchHn.Trim() } else { $txtHn.Text.Trim() }
 
-    # หากมีการระบุ HN ให้เคลียร์ชื่อและค่าผลตรวจเดิมออกก่อน
-    if ($targetHn) {
-        $txtName.Text = ""
-        $lblExamDate.Text = "วันเวลาที่ตรวจ: -"
-        foreach ($k in $inputs.Keys) { $inputs[$k].Text = "" }
-        foreach ($k in $warnLabels.Keys) { $warnLabels[$k].Text = "" }
+    # เคลียร์ค่าผลตรวจและชื่อเดิมทุกช่องให้ว่างเสมอ เพื่อไม่ให้มีตัวเลขของเคสเก่าค้าง
+    $txtName.Text = ""
+    $lblExamDate.Text = "วันเวลาที่ตรวจ: -"
+    foreach ($k in $inputs.Keys) {
+        $inputs[$k].Text = ""
+        $inputs[$k].BackColor = [System.Drawing.Color]::White
+    }
+    foreach ($k in $warnLabels.Keys) {
+        $warnLabels[$k].Text = ""
     }
 
     $extraDirs = @()
@@ -592,39 +596,55 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
                 $lblExamDate.Text = "วันเวลาที่ตรวจ: " + $dStr.Substring(6,2) + "/" + $dStr.Substring(4,2) + "/" + $dStr.Substring(0,4) + " " + $tStr.Substring(0,2) + ":" + $tStr.Substring(2,2) + " (จากภาพ DDR)"
             }
 
+            # หาขนาดของภาพเพื่อคำนวณตำแหน่งสัมพัทธ์ (Relative Coordinates) รองรับทุกความละเอียดภาพ
+            $wImg = 1.0; $hImg = 1.0
+            try {
+                $imgObj = [System.Drawing.Image]::FromFile($script:activeDdrImage.FullName)
+                $wImg = [double]$imgObj.Width
+                $hImg = [double]$imgObj.Height
+                $imgObj.Dispose()
+            } catch {}
+
             $ddrOcr = Invoke-WindowsOcr $script:activeDdrImage.FullName
-            if ($ddrOcr) {
-                $allWords = @()
+            if ($ddrOcr -and $wImg -gt 0 -and $hImg -gt 0) {
                 foreach ($l in $ddrOcr.Lines) {
                     foreach ($w in $l.Words) {
-                        $allWords += @{ Text = $w.Text; X = [int]$w.BoundingRect.X; Y = [int]$w.BoundingRect.Y }
-                    }
-                }
+                        $txt = $w.Text
+                        if ($txt -match "^\d+(\.\d+)?$") {
+                            $val = [double]$txt
+                            $intStr = [string][int][Math]::Round($val)
+                            $rx = $w.BoundingRect.X / $wImg
+                            $ry = $w.BoundingRect.Y / $hImg
 
-                foreach ($w in $allWords) {
-                    $txt = $w.Text
-                    $y = $w.Y
-                    $x = $w.X
-
-                    if ($txt -match "^\d+(\.\d+)?$") {
-                        $val = [double]$txt
-                        $intStr = [string][int][Math]::Round($val)
-
-                        if ($y -ge 650 -and $y -le 750 -and $x -ge 1550 -and $x -le 1750 -and !$inputs["ans_activity"].Text) {
-                            $inputs["ans_activity"].Text = $intStr
-                            $hasExcelScores = $true
-                        } elseif ($y -ge 850 -and $y -le 950 -and $x -ge 1550 -and $x -le 1750 -and !$inputs["ans_balance"].Text) {
-                            $inputs["ans_balance"].Text = $intStr
-                        } elseif ($y -ge 1200 -and $y -le 1320 -and $x -ge 1000 -and $x -le 1200 -and !$inputs["stress_resistance"].Text) {
-                            $inputs["stress_resistance"].Text = $intStr
-                        } elseif ($y -ge 1400 -and $y -le 1500 -and $x -ge 1000 -and $x -le 1200 -and !$inputs["stress_index"].Text) {
-                            $inputs["stress_index"].Text = $intStr
-                        } elseif ($y -ge 1550 -and $y -le 1650 -and $x -ge 1000 -and $x -le 1200 -and !$inputs["fatigue_index"].Text) {
-                            $inputs["fatigue_index"].Text = $intStr
-                        } elseif ($y -ge 1800 -and $y -le 1880 -and $x -ge 1000 -and $x -le 1200 -and !$inputs["mean_heart_rate"].Text) {
-                            $inputs["mean_heart_rate"].Text = $intStr
-                        } elseif ($y -ge 1940 -and $y -le 2040 -and $x -ge 1000 -and $x -le 1200 -and !$inputs["electro_cardiac_stability"].Text) {
-                            $inputs["electro_cardiac_stability"].Text = $intStr
+                            # 1.1 ANS Activity (~0.77, ~0.24)
+                            if ($rx -ge 0.68 -and $rx -le 0.88 -and $ry -ge 0.20 -and $ry -le 0.27 -and !$inputs["ans_activity"].Text) {
+                                $inputs["ans_activity"].Text = $intStr
+                                $hasExcelScores = $true
+                            }
+                            # 1.2 ANS Balance (~0.77, ~0.31)
+                            elseif ($rx -ge 0.68 -and $rx -le 0.88 -and $ry -ge 0.28 -and $ry -le 0.36 -and !$inputs["ans_balance"].Text) {
+                                $inputs["ans_balance"].Text = $intStr
+                            }
+                            # 2.1 Stress Resistance (~0.51, ~0.43)
+                            elseif ($rx -ge 0.44 -and $rx -le 0.60 -and $ry -ge 0.39 -and $ry -le 0.46 -and !$inputs["stress_resistance"].Text) {
+                                $inputs["stress_resistance"].Text = $intStr
+                            }
+                            # 2.2 Stress Index (~0.51, ~0.49)
+                            elseif ($rx -ge 0.44 -and $rx -le 0.60 -and $ry -ge 0.46 -and $ry -le 0.515 -and !$inputs["stress_index"].Text) {
+                                $inputs["stress_index"].Text = $intStr
+                            }
+                            # 2.3 Fatigue Index (~0.51, ~0.54)
+                            elseif ($rx -ge 0.44 -and $rx -le 0.60 -and $ry -ge 0.515 -and $ry -le 0.575 -and !$inputs["fatigue_index"].Text) {
+                                $inputs["fatigue_index"].Text = $intStr
+                            }
+                            # 3.1 Mean Heart Rate (~0.51, ~0.62)
+                            elseif ($rx -ge 0.44 -and $rx -le 0.60 -and $ry -ge 0.59 -and $ry -le 0.65 -and !$inputs["mean_heart_rate"].Text) {
+                                $inputs["mean_heart_rate"].Text = $intStr
+                            }
+                            # 3.2 Electro-Cardiac Stability (~0.51, ~0.67)
+                            elseif ($rx -ge 0.44 -and $rx -le 0.60 -and $ry -ge 0.65 -and $ry -le 0.72 -and !$inputs["electro_cardiac_stability"].Text) {
+                                $inputs["electro_cardiac_stability"].Text = $intStr
+                            }
                         }
                     }
                 }
@@ -632,21 +652,37 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
         }
 
         if ($script:activeApgImage) {
+            $wApg = 1.0; $hApg = 1.0
+            try {
+                $imgApgObj = [System.Drawing.Image]::FromFile($script:activeApgImage.FullName)
+                $wApg = [double]$imgApgObj.Width
+                $hApg = [double]$imgApgObj.Height
+                $imgApgObj.Dispose()
+            } catch {}
+
             $apgOcr = Invoke-WindowsOcr $script:activeApgImage.FullName
             if ($apgOcr) {
                 foreach ($l in $apgOcr.Lines) {
                     if (!$inputs["wave_level"].Text) {
-                        if ($l.Text -match "(?:ระดับ|Type|Level|Wave)\s*([1-7])" -or $l.Text -match "([1-7])\s*(?:Good|Normal|Warning)") {
+                        if ($l.Text -match "(?i)(?:Type|Level|Wave)\s*[:=\s]*([1-7])" -or $l.Text -match "([1-7])\s*(?:Good|Normal|Warning)") {
                             $inputs["wave_level"].Text = $matches[1]
                             $hasExcelScores = $true
                         }
                     }
+                    if (!$inputs["mean_heart_rate"].Text -and $l.Text -match "(?i)\bHR\b\s*(\d{2,3})") {
+                        $inputs["mean_heart_rate"].Text = $matches[1]
+                    }
                     foreach ($w in $l.Words) {
-                        if ($w.Text -match "^[1-7]$" -and $w.BoundingRect.X -ge 200 -and $w.BoundingRect.X -le 450 -and $w.BoundingRect.Y -ge 1500 -and $w.BoundingRect.Y -le 1900 -and !$inputs["wave_level"].Text) {
+                        $rx = if ($wApg -gt 0) { $w.BoundingRect.X / $wApg } else { 0 }
+                        $ry = if ($hApg -gt 0) { $w.BoundingRect.Y / $hApg } else { 0 }
+
+                        # 4.1 Wave Level digit (~0.147, ~0.588)
+                        if (!$inputs["wave_level"].Text -and $w.Text -match "^[1-7]$" -and $rx -ge 0.10 -and $rx -le 0.22 -and $ry -ge 0.55 -and $ry -le 0.63) {
                             $inputs["wave_level"].Text = $w.Text
                             $hasExcelScores = $true
                         }
-                        if (!$inputs["mean_heart_rate"].Text -and $w.Text -match "^\d{2,3}$" -and $w.BoundingRect.X -ge 300 -and $w.BoundingRect.X -le 450 -and $w.BoundingRect.Y -ge 1450 -and $w.BoundingRect.Y -le 1550) {
+                        # Fallback HR on APG (~0.16, ~0.50)
+                        if (!$inputs["mean_heart_rate"].Text -and $w.Text -match "^\d{2,3}$" -and $rx -ge 0.12 -and $rx -le 0.26 -and $ry -ge 0.46 -and $ry -le 0.54) {
                             $inputs["mean_heart_rate"].Text = $w.Text
                         }
                     }
@@ -680,8 +716,8 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
     }
 }
 
-# Auto scan upon launching (Default: Latest Exam)
-Scan-AllData
+# หน้าจอเริ่มต้นให้ว่างเสมอ (ตามที่ลูกรักต้องการ) เพื่อพร้อมให้พิมพ์ HN หรือกดปุ่มดึงผลตรวจ
+Clear-FormFields
 
 # Button: Re-scan / Search by HN
 $btnScanAgain.Add_Click({
