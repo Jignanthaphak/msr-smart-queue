@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # MSR Biofeedback Sender Widget (Smart Hybrid Edition v4.3)
 # สำหรับติดตั้งบนหน้าจอเครื่องตรวจ Medicore SA-3000P ศูนย์สุขภาพจิตที่ 4
 # ระบบค้นหาอัจฉริยะ (ดึงเคสล่าสุดอัตโนมัติ หรือพิมพ์ค้นหาตาม HN)
@@ -321,15 +321,32 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
 
     $targetHn = if ($searchHn) { $searchHn.Trim() } else { $txtHn.Text.Trim() }
 
+    $extraDirs = @()
+    if ($customFolder -and (Test-Path $customFolder)) {
+        $extraDirs += $customFolder
+        $p = Split-Path -Parent $customFolder
+        if ($p -and (Test-Path $p)) {
+            $extraDirs += $p
+            $ex = Join-Path $p "EXCELDATA"
+            if (Test-Path $ex) { $extraDirs += $ex }
+            $im = Join-Path $p "Image"
+            if (Test-Path $im) { $extraDirs += $im }
+        }
+    }
+
     $candidateDirs = @(
-        $customFolder,
-        "C:\SAViewer_New THAI\Image",
+        $extraDirs,
         "C:\SA THAI\Image",
+        "C:\SA THAI\EXCELDATA",
+        "C:\SA THAI",
+        "C:\SAViewer_New THAI\Image",
+        "C:\SAViewer_New THAI\EXCELDATA",
+        "C:\SAViewer_New THAI",
         "D:\OneDrive\แฟรชไดรฟ\1",
         "D:\OneDrive\แฟรชไดรฟ\SAViewer_New THAI\Image",
         "D:\SAViewer_New THAI\Image",
         "C:\SA\Image"
-    ) | Where-Object { $_ -and (Test-Path $_) }
+    ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
 
     # 1. Search for Image Pair (DDR and APG)
     foreach ($dir in $candidateDirs) {
@@ -345,13 +362,27 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
         $foundDdr = $null
         $foundApg = $null
 
-        foreach ($f in $jpgs) {
-            if ($f.Name -match "\(3\)\.jpg$") {
-                if (!$foundApg) { $foundApg = $f }
-            } elseif ($f.Name -notmatch "\(2\)\.jpg$" -and $f.Name -notmatch "\(3\)\.jpg$") {
-                if (!$foundDdr) { $foundDdr = $f }
-            }
-            if ($foundDdr -and $foundApg) { break }
+        # แยกตามกลุ่มชื่อไฟล์ (รองรับทั้งระบบที่มี 2 หน้า และ 3 หน้า)
+        $fNamedDdr = $jpgs | Where-Object { $_.Name -match "ddr" } | Select-Object -First 1
+        $fNamedApg = $jpgs | Where-Object { $_.Name -match "apg" } | Select-Object -First 1
+        $f3 = $jpgs | Where-Object { $_.Name -match "\(3\)\.jpe?g$" } | Select-Object -First 1
+        $f2 = $jpgs | Where-Object { $_.Name -match "\(2\)\.jpe?g$" } | Select-Object -First 1
+        $fMain = $jpgs | Where-Object { $_.Name -notmatch "\(\d+\)\.jpe?g$" } | Select-Object -First 1
+
+        # DDR คือไฟล์หลัก (ไม่มีเลขวงเล็บ) หรือไฟล์ที่มีคำว่า ddr
+        if ($fNamedDdr) {
+            $foundDdr = $fNamedDdr
+        } else {
+            $foundDdr = $fMain
+        }
+
+        # APG คือไฟล์ที่มีคำว่า apg หรือ (3) หรือ (2) เช่นใน SA THAI ที่มี 2 หน้า
+        if ($fNamedApg) {
+            $foundApg = $fNamedApg
+        } elseif ($f3) {
+            $foundApg = $f3
+        } elseif ($f2) {
+            $foundApg = $f2
         }
 
         if ($foundDdr -or $foundApg) {
@@ -534,8 +565,14 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
             $apgOcr = Invoke-WindowsOcr $script:activeApgImage.FullName
             if ($apgOcr) {
                 foreach ($l in $apgOcr.Lines) {
+                    if (!$inputs["wave_level"].Text) {
+                        if ($l.Text -match "(?:ระดับ|Type|Level|Wave)\s*([1-7])" -or $l.Text -match "([1-7])\s*(?:Good|Normal|Warning)") {
+                            $inputs["wave_level"].Text = $matches[1]
+                            $hasExcelScores = $true
+                        }
+                    }
                     foreach ($w in $l.Words) {
-                        if ($w.Text -match "^[1-7]$" -and $w.BoundingRect.X -ge 250 -and $w.BoundingRect.X -le 400 -and $w.BoundingRect.Y -ge 1680 -and $w.BoundingRect.Y -le 1820 -and !$inputs["wave_level"].Text) {
+                        if ($w.Text -match "^[1-7]$" -and $w.BoundingRect.X -ge 200 -and $w.BoundingRect.X -le 450 -and $w.BoundingRect.Y -ge 1500 -and $w.BoundingRect.Y -le 1900 -and !$inputs["wave_level"].Text) {
                             $inputs["wave_level"].Text = $w.Text
                             $hasExcelScores = $true
                         }
@@ -546,6 +583,11 @@ function Scan-AllData([string]$customFolder = "", [string]$searchHn = "") {
                 }
             }
         }
+    }
+
+    # ค่าเริ่มต้นสำหรับ Ectopic Beat (การเต้นผิดจังหวะ) หากว่าง ให้เป็น 0
+    if (!$inputs["ectopic_beat"].Text) {
+        $inputs["ectopic_beat"].Text = "0"
     }
 
     # Validate all fields

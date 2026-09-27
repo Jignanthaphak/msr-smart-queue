@@ -73,14 +73,15 @@ while ($true) {
             $foundDdr = $null
             $foundApg = $null
 
-            foreach ($f in $jpgs) {
-                if ($f.Name -match "\(3\)\.jpg$") {
-                    if (!$foundApg) { $foundApg = $f }
-                } elseif ($f.Name -notmatch "\(2\)\.jpg$" -and $f.Name -notmatch "\(3\)\.jpg$") {
-                    if (!$foundDdr) { $foundDdr = $f }
-                }
-                if ($foundDdr -and $foundApg) { break }
-            }
+            # แยกตามกลุ่มชื่อไฟล์ (รองรับทั้งระบบที่มี 2 หน้า และ 3 หน้า)
+            $fNamedDdr = $jpgs | Where-Object { $_.Name -match "ddr" } | Select-Object -First 1
+            $fNamedApg = $jpgs | Where-Object { $_.Name -match "apg" } | Select-Object -First 1
+            $f3 = $jpgs | Where-Object { $_.Name -match "\(3\)\.jpe?g$" } | Select-Object -First 1
+            $f2 = $jpgs | Where-Object { $_.Name -match "\(2\)\.jpe?g$" } | Select-Object -First 1
+            $fMain = $jpgs | Where-Object { $_.Name -notmatch "\(\d+\)\.jpe?g$" } | Select-Object -First 1
+
+            if ($fNamedDdr) { $foundDdr = $fNamedDdr } else { $foundDdr = $fMain }
+            if ($fNamedApg) { $foundApg = $fNamedApg } elseif ($f3) { $foundApg = $f3 } elseif ($f2) { $foundApg = $f2 }
 
             if ($foundDdr) {
                 $uniqueKey = "$($foundDdr.FullName)_$($foundDdr.LastWriteTime.Ticks)"
