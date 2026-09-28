@@ -245,24 +245,24 @@ export default function QueueDisplayPage() {
                         </div>
                       </td>
 
-                      {/* Column 3: สถานะ (ป้ายเด้งดึ๋งนำสายตา ไม่ตัดคำ แถวเดียวเสมอ) */}
+                      {/* Column 3: สถานะ (ป้ายขนาดเท่ากันทุกสถานะ ไม่ตัดคำ แถวเดียวเสมอ) */}
                       <td className="py-6 px-6 text-center whitespace-nowrap">
                         {isCalling ? (
-                          <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-base md:text-lg font-bold bg-emerald-600 text-white animate-bounce shadow-md shadow-emerald-500/30 whitespace-nowrap">
+                          <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-bold bg-emerald-600 text-white animate-bounce shadow-md shadow-emerald-500/30 whitespace-nowrap">
                             <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
                             กำลังเรียก..
                           </span>
                         ) : isConsulting ? (
-                          <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-base md:text-lg font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs whitespace-nowrap">
+                          <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs whitespace-nowrap">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                             ให้คำปรึกษา
                           </span>
                         ) : isBreak ? (
-                          <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-base md:text-lg font-semibold bg-gray-200 text-gray-700 border border-gray-300 whitespace-nowrap">
+                          <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-semibold bg-gray-200 text-gray-700 border border-gray-300 whitespace-nowrap">
                             ⏳ ขอเวลาสักครู่
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-base md:text-lg font-semibold bg-gray-100 text-gray-400 border border-gray-200 whitespace-nowrap">
+                          <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-semibold bg-gray-100 text-gray-400 border border-gray-200 whitespace-nowrap">
                             ว่าง
                           </span>
                         )}
