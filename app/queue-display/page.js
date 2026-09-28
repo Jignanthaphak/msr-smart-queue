@@ -157,10 +157,10 @@ export default function QueueDisplayPage() {
         </div>
       </header>
 
-      {/* Main Grid: Left 5/6 Table Card | Right 1/6 Waiting Queue Card */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-6 gap-6 items-stretch">
-        {/* Left: Main Calling Table Card (5/6 width) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl md:rounded-3xl border border-gray-200 shadow-lg overflow-hidden flex flex-col justify-between">
+      {/* Main Grid: Left 4.5/6 (75%) Table Card | Right 1.5/6 (25%) Waiting Queue Card */}
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
+        {/* Left: Main Calling Table Card (4.5/6 = 75% width) */}
+        <div className="lg:col-span-3 bg-white rounded-2xl md:rounded-3xl border border-gray-200 shadow-lg overflow-hidden flex flex-col justify-between">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 text-lg md:text-xl font-bold tracking-wide">
@@ -275,29 +275,29 @@ export default function QueueDisplayPage() {
           </table>
         </div>
 
-        {/* Right: Waiting Queue Card (1/6 width) */}
-        <div className="lg:col-span-1 bg-white rounded-2xl md:rounded-3xl border border-gray-200 shadow-lg p-4 md:p-5 flex flex-col justify-between">
+        {/* Right: Waiting Queue Card (1.5/6 = 25% width) */}
+        <div className="lg:col-span-1 bg-white rounded-2xl md:rounded-3xl border border-gray-200 shadow-lg p-5 md:p-6 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-200">
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg">⏳</span>
-                <h2 className="text-sm xl:text-base font-extrabold text-gray-900 whitespace-nowrap">
+            <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⏳</span>
+                <h2 className="text-base md:text-lg font-black text-gray-900 whitespace-nowrap">
                   คิวรอตรวจถัดไป
                 </h2>
               </div>
               {queueData.waitingList && queueData.waitingList.length > 0 && (
-                <span className="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full">
                   {queueData.waitingList.length}
                 </span>
               )}
             </div>
 
             {queueData.waitingList && queueData.waitingList.length > 0 ? (
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-3">
                 {queueData.waitingList.slice(0, 6).map((item, idx) => (
                   <div
                     key={item.screening_id || idx}
-                    className={`py-2.5 px-2 rounded-xl font-mono font-black text-center text-base xl:text-lg border shadow-xs transition-all whitespace-nowrap ${
+                    className={`py-3 px-3 rounded-xl font-mono font-black text-center text-lg xl:text-xl border shadow-xs transition-all whitespace-nowrap ${
                       item.is_priority
                         ? "bg-emerald-100 text-emerald-900 border-emerald-500 ring-2 ring-emerald-400/50"
                         : "bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200"
@@ -307,7 +307,7 @@ export default function QueueDisplayPage() {
                   </div>
                 ))}
                 {queueData.waitingList.length > 6 && (
-                  <div className="text-center py-1.5 text-xs text-gray-500 font-semibold bg-gray-50 rounded-lg border border-dashed border-gray-200 whitespace-nowrap">
+                  <div className="text-center py-2 text-xs md:text-sm text-gray-500 font-semibold bg-gray-50 rounded-xl border border-dashed border-gray-200 whitespace-nowrap">
                     +{queueData.waitingList.length - 6} คิวรอ
                   </div>
                 )}
