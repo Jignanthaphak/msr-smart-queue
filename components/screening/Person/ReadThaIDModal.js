@@ -122,13 +122,18 @@ export default function ReadThaIDModal({ onSuccess }) {
 
           if (pollJson.success) {
             if (pollJson.status === "completed" && pollJson.data) {
+              console.log("ThaID completed data received:", pollJson.data);
               stopPolling();
               stopCountdown();
               setStatus("completed");
               setReceivedPerson(pollJson.data);
 
               // ส่งข้อมูลกลับไปยัง Hook แม่ (useManagesPersonFormScreening)
-              onSuccess?.(pollJson.data);
+              try {
+                onSuccess?.(pollJson.data);
+              } catch (onErr) {
+                console.error("Error in onSuccess callback:", onErr);
+              }
 
               // ปิดหน้าต่างอัตโนมัติหลังจากแสดงความสำเร็จ 1.5 วินาที
               setTimeout(() => {
