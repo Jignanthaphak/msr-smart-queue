@@ -39,6 +39,9 @@ export async function PATCH(req, {params}) {
     } catch (e) {}
 
     await notifyClients();
+    if (global.notifyQueueClients) {
+      await global.notifyQueueClients();
+    }
 
     return NextResponse.json({ ok: true, data: result });
 

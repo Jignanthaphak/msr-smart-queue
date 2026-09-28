@@ -30,6 +30,9 @@ export async function PATCH(req, {params}) {
     const result = await closeConsultScreenings({ create_by, session_id, source_file,  ...data }, where);
         
     await notifyClients();
+    if (global.notifyQueueClients) {
+      await global.notifyQueueClients();
+    }
 
     return NextResponse.json({ ok: true, data: result });
 

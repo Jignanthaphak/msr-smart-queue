@@ -12,6 +12,7 @@ if (!global.smartQueueState) {
     rooms: {},
     heldList: [], // Array of { screening_id, hn, patient_name, held_at, reason }
     lastCall: null, // { room_no, room_name, staff_name, hn, patient_name, timestamp }
+    priorityBypassedList: [], // Queue of patients bumped/bypassed by walk-in VIPs
   };
 }
 
@@ -70,14 +71,32 @@ export async function getQueueData() {
 
   // 2) Derive waiting list (status_id = 2 "รอตรวจ") excluding held patients
   const heldScreeningIds = new Set((global.smartQueueState?.heldList || []).map((h) => Number(h.screening_id)));
-  const waitingList = todayScreenings
+
+  // Cleanup priorityBypassedList: if someone in priority list has already started consult or completed, remove them
+  if (global.smartQueueState?.priorityBypassedList) {
+    global.smartQueueState.priorityBypassedList = global.smartQueueState.priorityBypassedList.filter((p) => {
+      const scr = todayScreenings.find((s) => String(s.hn) === String(p.hn));
+      return scr && Number(scr.status_id) === 2;
+    });
+  }
+
+  const priorityHns = new Set((global.smartQueueState?.priorityBypassedList || []).map((p) => String(p.hn)));
+
+  const baseWaitingList = todayScreenings
     .filter((s) => Number(s.status_id) === 2 && !heldScreeningIds.has(Number(s.screening_id)))
     .map((s) => ({
       screening_id: s.screening_id,
       hn: String(s.hn),
       patient_name: `${s.prefix_title || ""} ${s.firstname || ""} ${s.lastname || ""}`.trim(),
       status_name: s.status_name,
+      is_priority: priorityHns.has(String(s.hn)),
     }));
+
+  // Reorder waiting list so that priority bypassed patients are AT THE VERY FRONT!
+  const waitingList = [
+    ...baseWaitingList.filter((s) => priorityHns.has(String(s.hn))),
+    ...baseWaitingList.filter((s) => !priorityHns.has(String(s.hn))),
+  ];
 
   // 3) Construct rooms state based on config & active consultations
   const numRooms = config.active_rooms || 3;
@@ -115,6 +134,38 @@ export async function getQueueData() {
       currentHn = String(activeConsult.hn);
       currentPatientName = `${activeConsult.prefix_title || ""} ${activeConsult.firstname || ""} ${activeConsult.lastname || ""}`.trim();
       currentScreeningId = activeConsult.screening_id;
+
+      // ⚡ VIP / Walk-in Insertion Detection:
+      // If this room was actively calling a DIFFERENT patient (memoryRoom.current_hn),
+      // and staff in this room started consultation for activeConsult (different HN),
+      // that means a VIP or walk-in walked straight in without waiting for the queue!
+      if (
+        memoryRoom.status === "calling" &&
+        memoryRoom.current_hn &&
+        String(memoryRoom.current_hn) !== String(activeConsult.hn)
+      ) {
+        const displacedHn = String(memoryRoom.current_hn);
+        const displacedName = memoryRoom.patient_name || "";
+        const displacedScreeningId = memoryRoom.current_screening_id;
+
+        if (!global.smartQueueState.priorityBypassedList) {
+          global.smartQueueState.priorityBypassedList = [];
+        }
+
+        // Return the displaced patient to the TOP of the priority queue
+        if (!global.smartQueueState.priorityBypassedList.some((p) => String(p.hn) === displacedHn)) {
+          global.smartQueueState.priorityBypassedList.unshift({
+            hn: displacedHn,
+            patient_name: displacedName,
+            screening_id: displacedScreeningId,
+            bypassed_at: new Date().toISOString(),
+            room_no: i,
+          });
+        }
+
+        // Clear the superseded calling state for this room
+        delete global.smartQueueState.rooms[i];
+      }
     } else if (memoryRoom.status === "calling" && memoryRoom.current_hn) {
       currentStatus = "calling"; // Currently calling (Blinking Green)
       currentHn = memoryRoom.current_hn;
