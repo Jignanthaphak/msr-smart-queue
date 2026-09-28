@@ -4,6 +4,11 @@ import { getRegStatus } from "@/lib/services/thaidRegistrationStore";
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
+  
+  if (searchParams.get("ping")) {
+    return NextResponse.json({ success: true, version: "v2026.09.28-1900", time: Date.now() });
+  }
+
   const requestId = searchParams.get("requestId");
 
   if (!requestId) {
