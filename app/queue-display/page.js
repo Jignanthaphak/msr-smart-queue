@@ -98,17 +98,27 @@ export default function QueueDisplayPage() {
       {/* Top Header Bar (Clean Hospital Light Theme) */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/20 text-white font-bold text-2xl">
-            🩺
-          </div>
+          <img
+            src="/images/Logo-mhc4.png"
+            alt="โลโก้ศูนย์สุขภาพจิตที่ 4"
+            className="h-14 md:h-16 w-auto max-h-16 object-contain drop-shadow-xs"
+            onError={(e) => {
+              if (!e.target.dataset.triedImage) {
+                e.target.dataset.triedImage = "true";
+                e.target.src = "/image/Logo-mhc4.png";
+              } else if (!e.target.dataset.triedFallback) {
+                e.target.dataset.triedFallback = "true";
+                e.target.src = "/images/logo_transparent_cropped.png";
+              }
+            }}
+          />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
-              ระบบเรียกคิวผู้รับบริการ
-              <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-300 px-2.5 py-0.5 rounded-full font-bold">
-                Smart Queue
-              </span>
+            <h1 className="text-xl md:text-2xl font-black tracking-tight text-gray-900 leading-tight">
+              ศูนย์สุขภาพจิตที่ 4 กรมสุขภาพจิต กระทรวงสาธารณสุข
             </h1>
-            <p className="text-xs text-gray-500">ศูนย์สุขภาพจิตที่ 4 กรมสุขภาพจิต</p>
+            <p className="text-sm md:text-base text-gray-500 font-semibold tracking-normal mt-0.5">
+              ระบบเรียกคิวบริการให้การปรึกษาด้านสุขภาพจิต
+            </p>
           </div>
         </div>
 
