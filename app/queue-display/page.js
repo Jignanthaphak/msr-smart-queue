@@ -94,14 +94,14 @@ export default function QueueDisplayPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans select-none">
-      {/* Top Header Bar (Clean Hospital Light Theme) */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
+    <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans select-none p-4 md:p-6 lg:p-8">
+      {/* Top Header Bar: Separate Floating Card */}
+      <header className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 p-5 md:p-6 mb-6 flex flex-wrap items-center justify-between gap-4 shadow-md">
         <div className="flex items-center gap-4">
           <img
             src="/images/Logo-mhc4.png"
             alt="โลโก้ศูนย์สุขภาพจิตที่ 4"
-            className="h-14 md:h-16 w-auto max-h-16 object-contain drop-shadow-xs"
+            className="h-16 md:h-20 w-auto max-h-20 object-contain drop-shadow-xs"
             onError={(e) => {
               if (!e.target.dataset.triedImage) {
                 e.target.dataset.triedImage = "true";
@@ -113,19 +113,20 @@ export default function QueueDisplayPage() {
             }}
           />
           <div>
-            <h1 className="text-xl md:text-2xl font-black tracking-tight text-gray-900 leading-tight">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-black tracking-tight text-gray-900 leading-tight">
               ศูนย์สุขภาพจิตที่ 4 กรมสุขภาพจิต กระทรวงสาธารณสุข
             </h1>
-            <p className="text-sm md:text-base text-gray-500 font-semibold tracking-normal mt-0.5">
-              ระบบคิวบริการให้การปรึกษาด้านสุขภาพจิต
-            </p>
+            <div className="text-sm md:text-base text-emerald-600 font-extrabold tracking-wide mt-1 flex items-center gap-1.5">
+              <span className="text-amber-400 text-base md:text-lg">✨</span>
+              <span>ระบบคิวบริการให้การปรึกษาด้านสุขภาพจิต</span>
+            </div>
           </div>
         </div>
 
         {/* Clock & Controls */}
         <div className="flex items-center gap-6">
           <div className="text-right">
-            <div className="text-2xl font-black font-mono tracking-wider text-emerald-600 flex items-center gap-2 justify-end">
+            <div className="text-2xl md:text-3xl font-black font-mono tracking-wider text-emerald-600 flex items-center gap-2 justify-end">
               <Clock className="w-5 h-5 text-gray-400" />
               {currentTime || "--:--:--"}
             </div>
@@ -157,8 +158,8 @@ export default function QueueDisplayPage() {
       </header>
 
       {/* Main Table: Col 1: HN | Col 2: ห้องให้คำปรึกษา | Col 3: สถานะ */}
-      <main className="flex-1 p-6 lg:p-8 flex flex-col justify-start">
-        <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+      <main className="flex-1 flex flex-col justify-start">
+        <div className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 shadow-lg overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 text-lg md:text-xl font-bold tracking-wide">
