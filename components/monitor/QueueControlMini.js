@@ -268,8 +268,8 @@ export default function QueueControlMini() {
                           🟢 กำลังเรียก
                         </span>
                       ) : isConsulting ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-400 text-white">
-                          ⚪ กำลังตรวจ
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          ให้คำปรึกษา
                         </span>
                       ) : isBreak ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-400 text-white">

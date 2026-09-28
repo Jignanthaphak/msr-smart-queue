@@ -163,7 +163,7 @@ export default function QueueDisplayPage() {
                 const sortedRooms = [...(queueData.rooms || [])].sort((a, b) => {
                   const getPriority = (room) => {
                     if (room.status === "calling") return 2; // เรียกคิวล่าสุด อยู่ล่างสุด
-                    if (room.status === "consulting") return 1; // กำลังตรวจ อยู่ตรงกลาง
+                    if (room.status === "consulting") return 1; // ให้คำปรึกษา อยู่ตรงกลาง
                     return 0; // พัก หรือ ว่าง อยู่ด้านบน
                   };
 
@@ -241,9 +241,9 @@ export default function QueueDisplayPage() {
                             กำลังเรียก..
                           </span>
                         ) : isConsulting ? (
-                          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-base md:text-lg font-semibold bg-gray-200 text-gray-600 border border-gray-300">
-                            <span className="w-2.5 h-2.5 rounded-full bg-gray-400" />
-                            กำลังตรวจ
+                          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-base md:text-lg font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                            ให้คำปรึกษา
                           </span>
                         ) : isBreak ? (
                           <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-base md:text-lg font-semibold bg-gray-200 text-gray-600 border border-gray-300">
