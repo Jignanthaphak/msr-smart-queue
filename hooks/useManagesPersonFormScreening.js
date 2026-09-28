@@ -379,7 +379,7 @@ export function useManagesPersonFormScreening() {
       };
     });
 
-    message.success("ดึงข้อมูลและที่อยู่จากบัตรประชาชนสำเร็จ");
+    message.success("ดึงข้อมูลและที่อยู่สำเร็จเรียบร้อยแล้วค่ะ");
   };
 
   // ----------- return state & callbacks -------------

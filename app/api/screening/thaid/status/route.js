@@ -1,0 +1,15 @@
+// app/api/screening/thaid/status/route.js
+import { NextResponse } from "next/server";
+import { getRegStatus } from "@/lib/services/thaidRegistrationStore";
+
+export async function GET(req) {
+  const { searchParams } = new URL(req.url);
+  const requestId = searchParams.get("requestId");
+
+  if (!requestId) {
+    return NextResponse.json({ success: false, message: "Missing requestId" }, { status: 400 });
+  }
+
+  const result = getRegStatus(requestId);
+  return NextResponse.json({ success: true, ...result });
+}

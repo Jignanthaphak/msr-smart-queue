@@ -1,4 +1,4 @@
-﻿// FILE: app/api/auth/thaid/callback/route.js
+// FILE: app/api/auth/thaid/callback/route.js
 "use server";
 import "server-only";
 
@@ -12,6 +12,7 @@ import { sessionOptions } from "@/lib/session";
 import { createAuthLog } from "@/lib/serviceActions/authActions";
 import { nowMs } from "@/lib/utils/dateFormat";
 import { modelAccountByPidOrUsername } from "@/model/account";
+import { completeRegRequest } from "@/lib/services/thaidRegistrationStore";
 
 function getPublicOrigin(req) {
   const forwardedProto = req?.headers?.get("x-forwarded-proto") || "https";
@@ -79,17 +80,22 @@ export async function GET(req) {
       return redirectToLogin("thaid_failed", "ไม่ได้รับ Authorization Code จาก ThaID");
     }
 
-    // Verify state against cookie
-    const savedState = req.cookies.get("thaid_oauth_state")?.value;
-    if (!savedState || savedState !== state) {
-      console.warn("ThaID state mismatch:", { savedState, state });
-      return redirectToLogin("thaid_invalid_state");
+    // ตรวจสอบว่าเป็นกรณีผู้รับบริการสแกนลงทะเบียนหน้าเคาน์เตอร์หรือไม่
+    const isRegistration = typeof state === "string" && state.startsWith("reg_");
+
+    if (!isRegistration) {
+      // กรณียืนยันตัวตนเข้าสู่ระบบสำหรับเจ้าหน้าที่ (Staff Login)
+      const savedState = req.cookies.get("thaid_oauth_state")?.value;
+      if (!savedState || savedState !== state) {
+        console.warn("ThaID state mismatch:", { savedState, state });
+        return redirectToLogin("thaid_invalid_state");
+      }
     }
 
     const clientId = process.env.THAID_CLIENT_ID;
     const clientSecret = process.env.THAID_CLIENT_SECRET;
     const apiKey = process.env.THAID_API_KEY;
-    const redirectUri = process.env.THAID_REDIRECT_URI || "https://mhc4.dmh.go.th/msr";
+    const redirectUri = process.env.THAID_REDIRECT_URI || "https://mhc4.dmh.go.th/msr/api/auth/thaid/callback";
     const tokenUrl = process.env.THAID_TOKEN_URL || "https://imauth.bora.dopa.go.th/api/v2/oauth2/token/";
     const userInfoUrl = process.env.THAID_USERINFO_URL || "https://imauth.bora.dopa.go.th/api/v2/oauth2/userinfo/";
 
@@ -186,6 +192,99 @@ export async function GET(req) {
       console.error("ThaID missing pid:", { tokenDataKeys: Object.keys(tokenData), userInfo });
       const availableKeys = Object.keys(userInfo).length > 0 ? Object.keys(userInfo).join(", ") : Object.keys(tokenData).join(", ");
       return redirectToLogin("thaid_failed", `ไม่พบเลขประจำตัวประชาชน (pid) จาก ThaID (ข้อมูลที่พบ: ${availableKeys || "ไม่มี"})`);
+    }
+
+    // หากเป็นกรณีสแกนลงทะเบียนผู้รับบริการหน้าเคาน์เตอร์ (Patient Registration)
+    if (isRegistration) {
+      completeRegRequest(state, userInfo, pid);
+
+      const html = `<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ยืนยันตัวตนสำเร็จ - ศูนย์สุขภาพจิตที่ 4</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 36px 28px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    .icon-badge {
+      width: 76px;
+      height: 76px;
+      background: #DCFCE7;
+      color: #16A34A;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 38px;
+      margin: 0 auto 20px;
+    }
+    h2 {
+      color: #1E293B;
+      font-size: 22px;
+      margin: 0 0 12px;
+      font-weight: 700;
+    }
+    p {
+      color: #475569;
+      font-size: 15px;
+      line-height: 1.6;
+      margin: 0 0 16px;
+    }
+    .sub {
+      background: #F1F5F9;
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      color: #334155;
+      margin-top: 20px;
+      line-height: 1.5;
+    }
+    .footer {
+      margin-top: 24px;
+      font-size: 13px;
+      color: #94A3B8;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-badge">✓</div>
+    <h2>ยืนยันตัวตนสำเร็จ</h2>
+    <p>ระบบได้รับข้อมูลของท่านผ่าน ThaID เรียบร้อยแล้วค่ะ</p>
+    <div class="sub">
+      ข้อมูลถูกส่งไปยังหน้าจอลงทะเบียนของเจ้าหน้าที่เรียบร้อยแล้ว<br/>ท่านสามารถปิดหน้านี้ได้ทันที
+    </div>
+    <div class="footer">
+      ศูนย์สุขภาพจิตที่ 4 กรมสุขภาพจิต
+    </div>
+  </div>
+</body>
+</html>`;
+
+      return new NextResponse(html, {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+        },
+      });
     }
 
     // 3) Prepare Session & Log Metadata

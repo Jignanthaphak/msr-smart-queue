@@ -5,6 +5,7 @@ import BtnForm from '@/components/screening/BtnAction/BtnForm';
 import Checkbox from '@/components/common/Form/Checkbox';
 import Button from '@/components/common/Form/Button';
 import ReadCardModal from '@/components/screening/Person/ReadCardModal'; // <--- Import เข้ามา
+import ReadThaIDModal from '@/components/screening/Person/ReadThaIDModal'; // <--- ปุ่มดึงข้อมูลด้วย ThaID
 import { UserPlus, Pencil, Save, Stethoscope, X } from 'lucide-react';
 import { useManagesPersonFormScreening } from '@/hooks/useManagesPersonFormScreening';
 
@@ -87,9 +88,12 @@ export default function TabPerson({ open }) {
                 </Button>
               )}
               
-              {/* ปุ่มอ่านบัตรประชาชน */}
+              {/* ปุ่มอ่านบัตรประชาชน & ปุ่มดึงข้อมูลด้วย ThaID */}
               {!uiState.disabledForm && (
-                <ReadCardModal onSuccess={onReadCardSuccess} />
+                <>
+                  <ReadCardModal onSuccess={onReadCardSuccess} />
+                  <ReadThaIDModal onSuccess={onReadCardSuccess} />
+                </>
               )}
             </div>
 

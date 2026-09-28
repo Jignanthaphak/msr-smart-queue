@@ -1,4 +1,4 @@
-﻿// FILE: app/api/auth/thaid/login/route.js
+// FILE: app/api/auth/thaid/login/route.js
 "use server";
 import "server-only";
 
@@ -26,9 +26,9 @@ export async function GET(req) {
 
   try {
     const clientId = process.env.THAID_CLIENT_ID;
-    const redirectUri = process.env.THAID_REDIRECT_URI || "https://mhc4.dmh.go.th/msr";
+    const redirectUri = process.env.THAID_REDIRECT_URI || "https://mhc4.dmh.go.th/msr/api/auth/thaid/callback";
     const authUrlBase = process.env.THAID_AUTH_URL || "https://imauth.bora.dopa.go.th/api/v2/oauth2/auth/";
-    const scope = process.env.THAID_SCOPE || "openid pid title given_name family_name name ial";
+    const scope = process.env.THAID_SCOPE || "openid pid title given_name family_name name title_en given_name_en family_name_en name_en birthdate gender address house_address ial";
 
     if (!clientId) {
       const loginUrl = new URL(
