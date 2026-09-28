@@ -146,15 +146,15 @@ export default function QueueDisplayPage() {
         </div>
       </header>
 
-      {/* Main Table: Col 1: HN | Col 2: ห้องตรวจ | Col 3: สถานะ */}
+      {/* Main Table: Col 1: HN | Col 2: ห้องให้คำปรึกษา | Col 3: สถานะ */}
       <main className="flex-1 p-6 lg:p-8 flex flex-col justify-start">
         <style dangerouslySetInnerHTML={{ __html: `
-          @keyframes hnTextBlink {
+          @keyframes hnBlinkOnly {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.15; }
           }
           .animate-hn-blink {
-            animation: hnTextBlink 0.9s ease-in-out infinite;
+            animation: hnBlinkOnly 0.85s ease-in-out infinite;
           }
         `}} />
         <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
@@ -167,58 +167,88 @@ export default function QueueDisplayPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {queueData.rooms && queueData.rooms.length > 0 ? (
-                queueData.rooms.map((room, idx) => {
+              {(() => {
+                // เรียงคิวตามลำดับการเรียก: คิวล่าสุดจะอยู่ล่างสุดเสมอ เพื่อให้คนสนใจบรรทัดสุดท้าย
+                const sortedRooms = [...(queueData.rooms || [])].sort((a, b) => {
+                  const getPriority = (room) => {
+                    if (room.status === "calling") return 2; // เรียกคิวล่าสุด อยู่ล่างสุด
+                    if (room.status === "consulting") return 1; // กำลังตรวจ อยู่ตรงกลาง
+                    return 0; // พัก หรือ ว่าง อยู่ด้านบน
+                  };
+
+                  const prioA = getPriority(a);
+                  const prioB = getPriority(b);
+                  if (prioA !== prioB) {
+                    return prioA - prioB;
+                  }
+
+                  const timeA = a.called_at ? new Date(a.called_at).getTime() : 0;
+                  const timeB = b.called_at ? new Date(b.called_at).getTime() : 0;
+                  if (timeA !== timeB) return timeA - timeB;
+
+                  return (a.room_no || 0) - (b.room_no || 0);
+                });
+
+                if (sortedRooms.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={3} className="py-12 text-center text-gray-400 text-lg">
+                        กำลังเชื่อมต่อระบบเรียกคิว...
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return sortedRooms.map((room, idx) => {
                   const isCalling = room.status === "calling";
                   const isConsulting = room.status === "consulting";
                   const isBreak = room.status === "break";
+                  const isLatestBottomRow = idx === sortedRooms.length - 1;
 
                   return (
                     <tr
                       key={room.room_no || idx}
                       className={`transition-colors ${
                         isCalling
-                          ? "bg-emerald-50/60"
+                          ? "bg-emerald-50/70"
                           : isConsulting
-                          ? "bg-gray-50/40"
+                          ? "bg-gray-50/30"
                           : isBreak
-                          ? "bg-gray-50/80"
+                          ? "bg-gray-50/70"
                           : "hover:bg-gray-50/30"
-                      }`}
+                      } ${isLatestBottomRow && isCalling ? "border-b-2 border-emerald-500 shadow-xs" : ""}`}
                     >
-                      {/* Column 1: หมายเลข HN (ใส่กล่อง ตัวหนาสีเขียวเข้ม กระพริบเฉพาะตัวอักษร) */}
+                      {/* Column 1: หมายเลข HN (ไม่มีกล่อง ตัว HN กระพริบ ส่วนตัวเลขไม่กระพริบ) */}
                       <td className="py-6 px-8 text-center">
                         {isCalling && room.current_hn ? (
-                          <div className="inline-block px-8 py-3 rounded-2xl bg-emerald-50/90 border-2 border-emerald-500 shadow-md">
-                            <span className="font-mono text-4xl md:text-6xl font-black tracking-widest text-emerald-800 animate-hn-blink">
-                              HN {room.current_hn}
+                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl tracking-wider">
+                            <span className="font-black text-emerald-600 animate-hn-blink mr-3">
+                              HN
+                            </span>
+                            <span className="font-black text-gray-950">
+                              {room.current_hn}
                             </span>
                           </div>
                         ) : isConsulting && room.current_hn ? (
-                          <div className="inline-block px-8 py-3 rounded-2xl bg-gray-100 border border-gray-300">
-                            <span className="font-mono text-4xl md:text-6xl font-bold tracking-widest text-gray-500">
-                              HN {room.current_hn}
+                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl tracking-wider">
+                            <span className="font-bold text-gray-400 mr-3">
+                              HN
+                            </span>
+                            <span className="font-bold text-gray-600">
+                              {room.current_hn}
                             </span>
                           </div>
                         ) : isBreak ? (
-                          <div className="inline-block px-8 py-3 rounded-2xl bg-gray-100 border border-gray-200">
-                            <span className="font-mono text-3xl md:text-5xl font-bold text-gray-400">
-                              -
-                            </span>
-                          </div>
+                          <span className="font-mono text-4xl md:text-5xl font-bold text-gray-400">-</span>
                         ) : (
-                          <div className="inline-block px-8 py-3 rounded-2xl bg-gray-50 border border-dashed border-gray-200">
-                            <span className="font-mono text-3xl md:text-5xl font-bold text-gray-300">
-                              -
-                            </span>
-                          </div>
+                          <span className="font-mono text-4xl text-gray-300 font-bold">-</span>
                         )}
                       </td>
 
-                      {/* Column 2: ห้องให้คำปรึกษา (แสดงเป็นตัวเลข 1, 2, 3 ชัดเจน) */}
+                      {/* Column 2: ห้องให้คำปรึกษา (แสดงเป็นตัวเลขห้อง 1, 2, 3 ตามห้องที่เรียก) */}
                       <td className="py-6 px-8 text-center">
                         <div className="inline-flex items-center justify-center font-mono text-5xl md:text-7xl font-black text-gray-800 tracking-tight">
-                          {room.room_no || (room.room_name ? room.room_name.replace(/\D/g, "") : "") || (idx + 1)}
+                          {room.room_no || (room.room_name ? room.room_name.replace(/\D/g, "") : "")}
                         </div>
                       </td>
 
@@ -246,14 +276,8 @@ export default function QueueDisplayPage() {
                       </td>
                     </tr>
                   );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={3} className="py-12 text-center text-gray-400 text-lg">
-                    กำลังเชื่อมต่อระบบเรียกคิว...
-                  </td>
-                </tr>
-              )}
+                });
+              })()}
             </tbody>
           </table>
         </div>
