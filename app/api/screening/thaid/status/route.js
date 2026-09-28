@@ -10,6 +10,6 @@ export async function GET(req) {
     return NextResponse.json({ success: false, message: "Missing requestId" }, { status: 400 });
   }
 
-  const result = getRegStatus(requestId);
+  const result = await getRegStatus(requestId);
   return NextResponse.json({ success: true, ...result });
 }
