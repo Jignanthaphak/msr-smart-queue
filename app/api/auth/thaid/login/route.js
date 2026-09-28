@@ -24,19 +24,17 @@ export async function GET(req) {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "/msr";
   const origin = getPublicOrigin(req);
 
-  try {
-    const clientId = process.env.THAID_CLIENT_ID;
+    const VERIFIED_CLIENT_ID = "clN3cXlFTUtaTDZtSXdtSWN5Nno0OXcxdkg1YXVLa2g";
+    let clientId = process.env.THAID_CLIENT_ID || VERIFIED_CLIENT_ID;
+    if (!clientId || clientId.includes("clN3cIFTU")) {
+      clientId = VERIFIED_CLIENT_ID;
+    }
+
     const redirectUri = process.env.THAID_REDIRECT_URI || "https://mhc4.dmh.go.th/msr/api/auth/thaid/callback";
     const authUrlBase = process.env.THAID_AUTH_URL || "https://imauth.bora.dopa.go.th/api/v2/oauth2/auth/";
-    const scope = process.env.THAID_SCOPE || "openid pid title given_name family_name name title_en given_name_en family_name_en name_en birthdate gender address house_address ial";
-
-    if (!clientId) {
-      const loginUrl = new URL(
-        `${basePath}/login?error=thaid_failed&message=` + encodeURIComponent("ระบบยังไม่ได้ตั้งค่า THAID_CLIENT_ID ใน Environment Variables"),
-        origin
-      );
-      return NextResponse.redirect(loginUrl);
-    }
+    const scope =
+      process.env.THAID_SCOPE ||
+      "openid pid title given_name family_name title_en given_name_en family_name_en birthdate gender address ial";
 
     // Generate secure random state for CSRF protection
     const state = randomBytes(32).toString("hex");

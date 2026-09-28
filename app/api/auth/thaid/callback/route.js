@@ -92,16 +92,24 @@ export async function GET(req) {
       }
     }
 
-    const clientId = process.env.THAID_CLIENT_ID;
-    const clientSecret = process.env.THAID_CLIENT_SECRET;
-    const apiKey = process.env.THAID_API_KEY;
+    const VERIFIED_CLIENT_ID = "clN3cXlFTUtaTDZtSXdtSWN5Nno0OXcxdkg1YXVLa2g";
+    const VERIFIED_CLIENT_SECRET = "alNFeDJwQTV4YXAxRVNlQjB2em9pQUtlcFluSEYwSUtZQmxCNE9lVg";
+    const VERIFIED_API_KEY = "WP5KkTWML653rEiy6RI2Stx7a5M90cyl9ZNS7XQA";
+
+    let clientId = process.env.THAID_CLIENT_ID || VERIFIED_CLIENT_ID;
+    if (!clientId || clientId.includes("clN3cIFTU")) {
+      clientId = VERIFIED_CLIENT_ID;
+    }
+
+    let clientSecret = process.env.THAID_CLIENT_SECRET || VERIFIED_CLIENT_SECRET;
+    if (!clientSecret || clientSecret.includes("QUtIcFluSEY0")) {
+      clientSecret = VERIFIED_CLIENT_SECRET;
+    }
+
+    let apiKey = process.env.THAID_API_KEY || VERIFIED_API_KEY;
     const redirectUri = process.env.THAID_REDIRECT_URI || "https://mhc4.dmh.go.th/msr/api/auth/thaid/callback";
     const tokenUrl = process.env.THAID_TOKEN_URL || "https://imauth.bora.dopa.go.th/api/v2/oauth2/token/";
     const userInfoUrl = process.env.THAID_USERINFO_URL || "https://imauth.bora.dopa.go.th/api/v2/oauth2/userinfo/";
-
-    if (!clientId || !clientSecret) {
-      return redirectToLogin("thaid_failed", "ระบบยังไม่ได้ตั้งค่า THAID_CLIENT_ID หรือ THAID_CLIENT_SECRET");
-    }
 
     // 1) Exchange Authorization Code for Access Token
     const authHeader = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
