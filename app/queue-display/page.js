@@ -148,15 +148,6 @@ export default function QueueDisplayPage() {
 
       {/* Main Table: Col 1: HN | Col 2: ห้องให้คำปรึกษา | Col 3: สถานะ */}
       <main className="flex-1 p-6 lg:p-8 flex flex-col justify-start">
-        <style dangerouslySetInnerHTML={{ __html: `
-          @keyframes hnBlinkOnly {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.15; }
-          }
-          .animate-hn-blink {
-            animation: hnBlinkOnly 0.85s ease-in-out infinite;
-          }
-        `}} />
         <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -210,33 +201,23 @@ export default function QueueDisplayPage() {
                       key={room.room_no || idx}
                       className={`transition-colors ${
                         isCalling
-                          ? "bg-emerald-50/70"
+                          ? "bg-emerald-50/80 border-b-2 border-emerald-500 shadow-xs"
                           : isConsulting
                           ? "bg-gray-50/30"
                           : isBreak
                           ? "bg-gray-50/70"
                           : "hover:bg-gray-50/30"
-                      } ${isLatestBottomRow && isCalling ? "border-b-2 border-emerald-500 shadow-xs" : ""}`}
+                      }`}
                     >
-                      {/* Column 1: หมายเลข HN (ไม่มีกล่อง ตัว HN กระพริบ ส่วนตัวเลขไม่กระพริบ) */}
+                      {/* Column 1: หมายเลข HN (ตัวหนาสีเข้ม อยู่นิ่งไม่กระพริบ ไม่มีกรอบ) */}
                       <td className="py-6 px-8 text-center">
                         {isCalling && room.current_hn ? (
-                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl tracking-wider">
-                            <span className="font-black text-emerald-600 animate-hn-blink mr-3">
-                              HN
-                            </span>
-                            <span className="font-black text-gray-950">
-                              {room.current_hn}
-                            </span>
+                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-black tracking-wider text-emerald-950">
+                            HN {room.current_hn}
                           </div>
                         ) : isConsulting && room.current_hn ? (
-                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl tracking-wider">
-                            <span className="font-bold text-gray-400 mr-3">
-                              HN
-                            </span>
-                            <span className="font-bold text-gray-600">
-                              {room.current_hn}
-                            </span>
+                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-bold tracking-wider text-gray-500">
+                            HN {room.current_hn}
                           </div>
                         ) : isBreak ? (
                           <span className="font-mono text-4xl md:text-5xl font-bold text-gray-400">-</span>
@@ -252,10 +233,10 @@ export default function QueueDisplayPage() {
                         </div>
                       </td>
 
-                      {/* Column 3: สถานะ (กะพริบเขียว กำลังเรียก / สีเทานิ่ง กำลังตรวจ / สีเทา พัก) */}
+                      {/* Column 3: สถานะ (ป้ายกระพริบนำสายตาอย่างเดียว) */}
                       <td className="py-6 px-8 text-center">
                         {isCalling ? (
-                          <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-base md:text-lg font-bold bg-emerald-600 text-white animate-bounce shadow-md shadow-emerald-500/30">
+                          <span className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full text-base md:text-lg font-bold bg-emerald-600 text-white animate-pulse shadow-lg shadow-emerald-500/30">
                             <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
                             กำลังเรียก..
                           </span>
