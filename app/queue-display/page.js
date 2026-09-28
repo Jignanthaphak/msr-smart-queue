@@ -148,25 +148,34 @@ export default function QueueDisplayPage() {
 
       {/* Main Table: Col 1: HN | Col 2: ห้องตรวจ | Col 3: สถานะ */}
       <main className="flex-1 p-6 lg:p-8 flex flex-col justify-start">
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes hnTextBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.15; }
+          }
+          .animate-hn-blink {
+            animation: hnTextBlink 0.9s ease-in-out infinite;
+          }
+        `}} />
         <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 text-lg md:text-xl font-bold tracking-wide">
                 <th className="py-5 px-8 w-2/5 text-center">หมายเลข HN</th>
-                <th className="py-5 px-8 w-2/5 text-center">ห้องตรวจ</th>
+                <th className="py-5 px-8 w-2/5 text-center">ห้องให้คำปรึกษา</th>
                 <th className="py-5 px-8 w-1/5 text-center">สถานะ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {queueData.rooms && queueData.rooms.length > 0 ? (
-                queueData.rooms.map((room) => {
+                queueData.rooms.map((room, idx) => {
                   const isCalling = room.status === "calling";
                   const isConsulting = room.status === "consulting";
                   const isBreak = room.status === "break";
 
                   return (
                     <tr
-                      key={room.room_no}
+                      key={room.room_no || idx}
                       className={`transition-colors ${
                         isCalling
                           ? "bg-emerald-50/60"
@@ -177,30 +186,39 @@ export default function QueueDisplayPage() {
                           : "hover:bg-gray-50/30"
                       }`}
                     >
-                      {/* Column 1: หมายเลข HN */}
+                      {/* Column 1: หมายเลข HN (ใส่กล่อง ตัวหนาสีเขียวเข้ม กระพริบเฉพาะตัวอักษร) */}
                       <td className="py-6 px-8 text-center">
                         {isCalling && room.current_hn ? (
-                          <div className="inline-block px-7 py-2.5 rounded-2xl bg-emerald-100/90 border-2 border-emerald-500 text-emerald-700 font-mono text-4xl md:text-6xl font-black tracking-widest animate-pulse shadow-[0_0_30px_rgba(16,185,129,0.35)]">
-                            HN {room.current_hn}
+                          <div className="inline-block px-8 py-3 rounded-2xl bg-emerald-50/90 border-2 border-emerald-500 shadow-md">
+                            <span className="font-mono text-4xl md:text-6xl font-black tracking-widest text-emerald-800 animate-hn-blink">
+                              HN {room.current_hn}
+                            </span>
                           </div>
                         ) : isConsulting && room.current_hn ? (
-                          <div className="inline-block px-7 py-2.5 rounded-2xl bg-gray-100 border border-gray-300 text-gray-500 font-mono text-4xl md:text-6xl font-bold tracking-widest">
-                            HN {room.current_hn}
+                          <div className="inline-block px-8 py-3 rounded-2xl bg-gray-100 border border-gray-300">
+                            <span className="font-mono text-4xl md:text-6xl font-bold tracking-widest text-gray-500">
+                              HN {room.current_hn}
+                            </span>
                           </div>
                         ) : isBreak ? (
-                          <div className="inline-block px-6 py-2 rounded-2xl bg-gray-100 text-gray-400 font-mono text-3xl md:text-5xl font-bold">
-                            -
+                          <div className="inline-block px-8 py-3 rounded-2xl bg-gray-100 border border-gray-200">
+                            <span className="font-mono text-3xl md:text-5xl font-bold text-gray-400">
+                              -
+                            </span>
                           </div>
                         ) : (
-                          <div className="text-gray-300 font-mono text-4xl font-bold">-</div>
+                          <div className="inline-block px-8 py-3 rounded-2xl bg-gray-50 border border-dashed border-gray-200">
+                            <span className="font-mono text-3xl md:text-5xl font-bold text-gray-300">
+                              -
+                            </span>
+                          </div>
                         )}
                       </td>
 
-                      {/* Column 2: ห้องตรวจ (บอกแค่ห้อง ไม่ใส่ชื่อเจ้าหน้าที่) */}
+                      {/* Column 2: ห้องให้คำปรึกษา (แสดงเป็นตัวเลข 1, 2, 3 ชัดเจน) */}
                       <td className="py-6 px-8 text-center">
-                        <div className="inline-flex items-center gap-3 text-2xl md:text-4xl font-extrabold text-gray-900 tracking-wide">
-                          <span>🚪</span>
-                          <span>{room.room_name}</span>
+                        <div className="inline-flex items-center justify-center font-mono text-5xl md:text-7xl font-black text-gray-800 tracking-tight">
+                          {room.room_no || (room.room_name ? room.room_name.replace(/\D/g, "") : "") || (idx + 1)}
                         </div>
                       </td>
 
