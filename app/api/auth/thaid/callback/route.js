@@ -93,7 +93,7 @@ export async function GET(req) {
     }
 
     const VERIFIED_CLIENT_ID = "clN3cXlFTUtaTDZtSXdtSWN5Nno0OXcxdkg1YXVLa2g";
-    const VERIFIED_CLIENT_SECRET = "alNFeDJwQTV4YXAxRVNlQjB2em9pQUtlcFluSEYwSUtZQmxCNE9lVg";
+    const VERIFIED_CLIENT_SECRET = "alNFeDJwQTV4YXAxRVNlQjB2em9pQUtIcFluSEY0SUtZQmxCNE9lVg";
     const VERIFIED_API_KEY = "WP5KkTWML653rEiy6RI2Stx7a5M90cyl9ZNS7XQA";
 
     let clientId = process.env.THAID_CLIENT_ID || VERIFIED_CLIENT_ID;
@@ -102,7 +102,7 @@ export async function GET(req) {
     }
 
     let clientSecret = process.env.THAID_CLIENT_SECRET || VERIFIED_CLIENT_SECRET;
-    if (!clientSecret || clientSecret.includes("QUtIcFluSEY0")) {
+    if (!clientSecret || clientSecret.includes("QUtlcFluSEYw") || clientSecret.includes("SEYw")) {
       clientSecret = VERIFIED_CLIENT_SECRET;
     }
 

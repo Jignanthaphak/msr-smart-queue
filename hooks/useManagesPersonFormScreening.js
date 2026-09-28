@@ -297,15 +297,24 @@ export function useManagesPersonFormScreening() {
 
     if (addr && defaultData?.provinces) {
       // แมปจังหวัด
-      const p = defaultData.provinces.find(x => x.name_in_thai.includes(addr.province));
+      const cleanProv = (addr.province || "").trim();
+      const p = defaultData.provinces.find(
+        x => (x.name_in_thai && cleanProv && (x.name_in_thai.includes(cleanProv) || cleanProv.includes(x.name_in_thai)))
+      );
       if (p) {
         province_id = p.id;
         // แมปอำเภอ
-        const d = defaultData.districts.find(x => x.province_id === p.id && x.name_in_thai.includes(addr.district));
+        const cleanDist = (addr.district || "").trim();
+        const d = defaultData.districts?.find(
+          x => x.province_id === p.id && (x.name_in_thai && cleanDist && (x.name_in_thai.includes(cleanDist) || cleanDist.includes(x.name_in_thai)))
+        );
         if (d) {
           district_id = d.id;
           // แมปตำบล
-          const s = defaultData.subdistricts.find(x => x.district_id === d.id && x.name_in_thai.includes(addr.subdistrict));
+          const cleanSub = (addr.subdistrict || "").trim();
+          const s = defaultData.subdistricts?.find(
+            x => x.district_id === d.id && (x.name_in_thai && cleanSub && (x.name_in_thai.includes(cleanSub) || cleanSub.includes(x.name_in_thai)))
+          );
           if (s) {
             subdistrict_id = s.id;
             zip_code = s.zip_code;
@@ -320,33 +329,44 @@ export function useManagesPersonFormScreening() {
 
     // หา ID คำนำหน้าไทย (เทียบจากฟิลด์ title)
     if (cardData.prefixTH && defaultData?.name_prefixes_th) {
-      const matchTH = defaultData.name_prefixes_th.find(
-        x => x.title === cardData.prefixTH
-      );
-      if (matchTH) prefix_id = matchTH.prefix_id; // ดึงค่าจาก prefix_id
+      const cleanPrefix = cardData.prefixTH.trim().replace(/\.$/, "");
+      const matchTH = defaultData.name_prefixes_th.find(x => {
+        const t = (x.title || "").trim().replace(/\.$/, "");
+        if (t === cleanPrefix) return true;
+        if ((cleanPrefix === "น.ส" || cleanPrefix === "น.ส.") && (t === "นางสาว" || t === "น.ส" || t === "น.ส.")) return true;
+        if (cleanPrefix === "นางสาว" && (t === "นางสาว" || t === "น.ส" || t === "น.ส.")) return true;
+        if ((cleanPrefix === "ด.ช" || cleanPrefix === "ด.ช.") && (t === "เด็กชาย" || t === "ด.ช" || t === "ด.ช.")) return true;
+        if (cleanPrefix === "เด็กชาย" && (t === "เด็กชาย" || t === "ด.ช" || t === "ด.ช.")) return true;
+        if ((cleanPrefix === "ด.ญ" || cleanPrefix === "ด.ญ.") && (t === "เด็กหญิง" || t === "ด.ญ" || t === "ด.ญ.")) return true;
+        if (cleanPrefix === "เด็กหญิง" && (t === "เด็กหญิง" || t === "ด.ญ" || t === "ด.ญ.")) return true;
+        return false;
+      });
+      if (matchTH) prefix_id = matchTH.prefix_id;
     }
 
     // หา ID คำนำหน้าอังกฤษ (เทียบจากฟิลด์ title)
-    
     if (cardData.prefixEN && defaultData?.name_prefixes_en) {
-      const matchEN = defaultData.name_prefixes_en.find(
-        x => x.title == cardData.prefixEN
-      
-      );
-
-      if (matchEN) prefix_en_id = matchEN.prefix_id; // ดึงค่าจาก prefix_id
+      const cleanPrefixEN = cardData.prefixEN.trim().toLowerCase().replace(/\.$/, "");
+      const matchEN = defaultData.name_prefixes_en.find(x => {
+        const t = (x.title || "").trim().toLowerCase().replace(/\.$/, "");
+        return t === cleanPrefixEN;
+      });
+      if (matchEN) prefix_en_id = matchEN.prefix_id;
     }
 
     // 2. เอาข้อมูลใหม่ไปทับ personData เดิม
     setPersonData((prev) => {
       // ดึง array ที่อยู่เดิมออกมา (ถ้าไม่มีสร้างเป็น array ว่าง)
-      let newAddresses = prev?.persons_address ? cloneDeep(prev.persons_address) : [];
+      let newAddresses = (prev?.persons_addresses || prev?.persons_address)
+        ? cloneDeep(prev.persons_addresses || prev.persons_address)
+        : [];
       
-      // หาตำแหน่งของที่อยู่ "ตามทะเบียนบ้าน/ตามบัตร" (มักจะใช้ address_type_id = 1)
-      const cardAddrIndex = newAddresses.findIndex(a => a.address_type_id === 1);
+      // หาตำแหน่งของที่อยู่ "ตามทะเบียนบ้าน/ตามบัตร" (มักจะใช้ address_type_id = 1 หรือ type = 1)
+      const cardAddrIndex = newAddresses.findIndex(a => a.type === 1 || a.address_type_id === 1);
       
       const newCardAddress = {
-          type: 1, 
+          type: 1,
+          address_type_id: 1,
           houseno: addr?.houseno || "",
           villagenno: addr?.moo || "",
           road: addr?.road || addr?.soi || addr?.trok || "", // รวมซอย/ถนน ไว้ช่องเดียวกัน
