@@ -99,13 +99,13 @@ export default function QueueDisplayPage() {
       onClick={ensureAudioEnabled}
       className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans select-none p-4 md:p-6 lg:p-8"
     >
-      {/* Top Header Bar: Separate Floating Card */}
-      <header className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 p-5 md:p-6 mb-6 flex flex-wrap items-center justify-between gap-4 shadow-md">
-        <div className="flex items-center gap-4">
+      {/* Top Header Bar: Single Horizontal Row, Never Wraps, Clock Right-Aligned */}
+      <header className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 p-4 md:p-6 mb-6 flex items-center justify-between gap-4 md:gap-6 shadow-md">
+        <div className="flex items-center gap-3 md:gap-4 min-w-0">
           <img
             src="/images/Logo-mhc4.png"
             alt="โลโก้ศูนย์สุขภาพจิตที่ 4"
-            className="h-16 md:h-20 w-auto max-h-20 object-contain drop-shadow-xs"
+            className="h-14 md:h-16 lg:h-20 w-auto max-h-20 shrink-0 object-contain drop-shadow-xs"
             onError={(e) => {
               if (!e.target.dataset.triedImage) {
                 e.target.dataset.triedImage = "true";
@@ -116,33 +116,33 @@ export default function QueueDisplayPage() {
               }
             }}
           />
-          <div>
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-black tracking-tight text-gray-900 leading-tight">
+          <div className="min-w-0">
+            <h1 className="text-lg md:text-xl lg:text-2xl xl:text-3xl font-black tracking-tight text-gray-900 leading-tight whitespace-nowrap">
               ศูนย์สุขภาพจิตที่ 4 กรมสุขภาพจิต กระทรวงสาธารณสุข
             </h1>
-            <div className="text-base md:text-lg lg:text-xl text-emerald-600 font-extrabold tracking-wide mt-1.5 flex items-center gap-2">
-              <span className="text-amber-400 text-lg md:text-xl">✨</span>
+            <div className="text-sm md:text-base lg:text-lg text-emerald-600 font-extrabold tracking-wide mt-1 flex items-center gap-1.5 whitespace-nowrap">
+              <span className="text-amber-400 text-base md:text-lg">✨</span>
               <span>ระบบคิวบริการให้การปรึกษาด้านสุขภาพจิต</span>
             </div>
           </div>
         </div>
 
-        {/* Clock & Controls */}
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <div className="text-3xl md:text-4xl lg:text-5xl font-black font-mono tracking-wider text-emerald-600 flex items-center gap-2.5 justify-end">
-              <Clock className="w-6 h-6 md:w-8 md:h-8 text-gray-400" />
+        {/* Clock & Controls (Right-aligned, never wraps) */}
+        <div className="flex items-center gap-3 shrink-0 ml-auto">
+          <div className="text-right whitespace-nowrap">
+            <div className="text-2xl md:text-3xl lg:text-4xl font-black font-mono tracking-wider text-emerald-600 flex items-center gap-2 justify-end">
+              <Clock className="w-5 h-5 md:w-6 md:h-6 text-gray-400 shrink-0" />
               <span>{currentTime || "--:--:--"}</span>
             </div>
-            <div className="text-xs md:text-sm text-gray-500 font-semibold mt-1">{currentDate}</div>
+            <div className="text-xs md:text-sm text-gray-500 font-semibold mt-0.5">{currentDate}</div>
           </div>
 
           <button
             onClick={handleToggleFullscreen}
-            className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 border border-gray-200 transition-colors shadow-2xs"
+            className="p-2 md:p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 border border-gray-200 transition-colors shadow-2xs shrink-0"
             title="เต็มจอ (Fullscreen)"
           >
-            <Maximize className="w-5 h-5" />
+            <Maximize className="w-4 h-4 md:w-5 md:h-5" />
           </button>
         </div>
       </header>
