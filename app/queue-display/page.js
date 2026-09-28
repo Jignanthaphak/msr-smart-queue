@@ -157,9 +157,10 @@ export default function QueueDisplayPage() {
         </div>
       </header>
 
-      {/* Main Table: Col 1: HN | Col 2: ห้องให้คำปรึกษา | Col 3: สถานะ */}
-      <main className="flex-1 flex flex-col justify-start">
-        <div className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 shadow-lg overflow-hidden">
+      {/* Main Grid: Left 5/6 Table Card | Right 1/6 Waiting Queue Card */}
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-6 gap-6 items-stretch">
+        {/* Left: Main Calling Table Card (5/6 width) */}
+        <div className="lg:col-span-5 bg-white rounded-2xl md:rounded-3xl border border-gray-200 shadow-lg overflow-hidden flex flex-col justify-between">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 text-lg md:text-xl font-bold tracking-wide">
@@ -274,39 +275,53 @@ export default function QueueDisplayPage() {
           </table>
         </div>
 
-        {/* Bottom Waiting Queue Bar */}
-        <div className="mt-6 p-5 md:p-6 rounded-2xl md:rounded-3xl bg-white border border-gray-200 shadow-md flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-lg md:text-xl font-extrabold text-gray-900 flex items-center gap-2 whitespace-nowrap">
-              <span>⏳</span> คิวรอตรวจถัดไป:
-            </span>
+        {/* Right: Waiting Queue Card (1/6 width) */}
+        <div className="lg:col-span-1 bg-white rounded-2xl md:rounded-3xl border border-gray-200 shadow-lg p-4 md:p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-200">
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg">⏳</span>
+                <h2 className="text-sm xl:text-base font-extrabold text-gray-900 whitespace-nowrap">
+                  คิวรอตรวจถัดไป
+                </h2>
+              </div>
+              {queueData.waitingList && queueData.waitingList.length > 0 && (
+                <span className="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                  {queueData.waitingList.length}
+                </span>
+              )}
+            </div>
+
             {queueData.waitingList && queueData.waitingList.length > 0 ? (
-              <div className="flex items-center gap-3 overflow-x-auto py-1">
-                {queueData.waitingList.slice(0, 5).map((item, idx) => (
-                  <span
+              <div className="flex flex-col gap-2.5">
+                {queueData.waitingList.slice(0, 6).map((item, idx) => (
+                  <div
                     key={item.screening_id || idx}
-                    className={`px-4 py-2 rounded-xl font-mono font-black text-xl md:text-2xl border shadow-xs transition-all whitespace-nowrap ${
+                    className={`py-2.5 px-2 rounded-xl font-mono font-black text-center text-base xl:text-lg border shadow-xs transition-all whitespace-nowrap ${
                       item.is_priority
                         ? "bg-emerald-100 text-emerald-900 border-emerald-500 ring-2 ring-emerald-400/50"
-                        : "bg-gray-100 text-gray-800 border-gray-300"
+                        : "bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200"
                     }`}
                   >
                     HN {item.hn}
-                  </span>
+                  </div>
                 ))}
-                {queueData.waitingList.length > 5 && (
-                  <span className="text-sm md:text-base text-gray-500 font-semibold px-2 whitespace-nowrap">
-                    +{queueData.waitingList.length - 5} คิว
-                  </span>
+                {queueData.waitingList.length > 6 && (
+                  <div className="text-center py-1.5 text-xs text-gray-500 font-semibold bg-gray-50 rounded-lg border border-dashed border-gray-200 whitespace-nowrap">
+                    +{queueData.waitingList.length - 6} คิวรอ
+                  </div>
                 )}
               </div>
             ) : (
-              <span className="text-gray-400 text-base italic">ไม่มีคิวรอ</span>
+              <div className="flex flex-col items-center justify-center text-gray-400 text-sm py-10 italic">
+                <span>🌿</span>
+                <span className="mt-1">ไม่มีคิวรอ</span>
+              </div>
             )}
           </div>
 
-          <div className="text-xs text-gray-400 whitespace-nowrap hidden lg:block">
-            ระบบทำงานอัตโนมัติ Real-Time | MSR Smart Queue System
+          <div className="mt-4 pt-3 border-t border-gray-100 text-[10px] text-gray-400 text-center whitespace-nowrap">
+            Real-Time Queue
           </div>
         </div>
       </main>
