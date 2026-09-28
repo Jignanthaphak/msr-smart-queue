@@ -264,31 +264,37 @@ export default function QueueDisplayPage() {
         </div>
 
         {/* Bottom Waiting Queue Bar */}
-        <div className="mt-6 p-4 rounded-xl bg-white border border-gray-200 shadow-xs flex items-center justify-between text-sm text-gray-600">
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-gray-800">คิวรอตรวจถัดไป:</span>
+        <div className="mt-6 p-5 rounded-2xl bg-white border border-gray-200 shadow-md flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="text-lg md:text-xl font-extrabold text-gray-900 flex items-center gap-2 whitespace-nowrap">
+              <span>⏳</span> คิวรอตรวจถัดไป:
+            </span>
             {queueData.waitingList && queueData.waitingList.length > 0 ? (
-              <div className="flex items-center gap-2 overflow-x-auto">
-                {queueData.waitingList.slice(0, 6).map((item, idx) => (
+              <div className="flex items-center gap-3 overflow-x-auto py-1">
+                {queueData.waitingList.slice(0, 5).map((item, idx) => (
                   <span
                     key={item.screening_id || idx}
-                    className="px-3 py-1 rounded-lg bg-gray-100 text-emerald-700 font-mono font-bold text-xs border border-gray-300"
+                    className={`px-4 py-2 rounded-xl font-mono font-black text-xl md:text-2xl border shadow-xs transition-all whitespace-nowrap ${
+                      item.is_priority
+                        ? "bg-emerald-100 text-emerald-900 border-emerald-500 ring-2 ring-emerald-400/50"
+                        : "bg-gray-100 text-gray-800 border-gray-300"
+                    }`}
                   >
                     HN {item.hn}
                   </span>
                 ))}
-                {queueData.waitingList.length > 6 && (
-                  <span className="text-xs text-gray-400 font-medium">
-                    +{queueData.waitingList.length - 6} คิว
+                {queueData.waitingList.length > 5 && (
+                  <span className="text-sm md:text-base text-gray-500 font-semibold px-2 whitespace-nowrap">
+                    +{queueData.waitingList.length - 5} คิว
                   </span>
                 )}
               </div>
             ) : (
-              <span className="text-gray-400 italic">ไม่มีคิวรอ</span>
+              <span className="text-gray-400 text-base italic">ไม่มีคิวรอ</span>
             )}
           </div>
 
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-gray-400 whitespace-nowrap hidden lg:block">
             ระบบทำงานอัตโนมัติ Real-Time | MSR Smart Queue System
           </div>
         </div>
