@@ -24,6 +24,7 @@ export async function GET(req) {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "/msr";
   const origin = getPublicOrigin(req);
 
+  try {
     const VERIFIED_CLIENT_ID = "clN3cXlFTUtaTDZtSXdtSWN5Nno0OXcxdkg1YXVLa2g";
     let clientId = process.env.THAID_CLIENT_ID || VERIFIED_CLIENT_ID;
     if (!clientId || clientId.includes("clN3cIFTU")) {
