@@ -216,7 +216,7 @@ export default function QueueDisplayPage() {
                             HN {room.current_hn}
                           </div>
                         ) : isConsulting && room.current_hn ? (
-                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-bold tracking-wider text-gray-700">
+                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-bold tracking-wider text-gray-600">
                             HN {room.current_hn}
                           </div>
                         ) : isBreak ? (
@@ -246,8 +246,8 @@ export default function QueueDisplayPage() {
                             กำลังตรวจ
                           </span>
                         ) : isBreak ? (
-                          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-base md:text-lg font-semibold bg-gray-200 text-gray-500 border border-gray-300">
-                            ☕ พัก
+                          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-base md:text-lg font-semibold bg-gray-200 text-gray-600 border border-gray-300">
+                            ⏳ ขอเวลาสักครู่
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-base md:text-lg font-semibold bg-gray-100 text-gray-400 border border-gray-200">
