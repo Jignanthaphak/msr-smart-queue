@@ -163,9 +163,9 @@ export default function QueueDisplayPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-gray-700 text-lg md:text-xl font-bold tracking-wide">
-                <th className="py-5 px-8 w-2/5 text-center">หมายเลข HN</th>
-                <th className="py-5 px-8 w-2/5 text-center">ห้องให้คำปรึกษา</th>
-                <th className="py-5 px-8 w-1/5 text-center">สถานะ</th>
+                <th className="py-5 px-6 w-[36%] text-center whitespace-nowrap">หมายเลข HN</th>
+                <th className="py-5 px-6 w-[32%] text-center whitespace-nowrap">ห้องให้คำปรึกษา</th>
+                <th className="py-5 px-6 w-[32%] text-center whitespace-nowrap">สถานะ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -221,13 +221,13 @@ export default function QueueDisplayPage() {
                       }`}
                     >
                       {/* Column 1: หมายเลข HN (ตัวหนาสีเข้ม อยู่นิ่งไม่กระพริบ ไม่มีกรอบ) */}
-                      <td className="py-6 px-8 text-center">
+                      <td className="py-6 px-6 text-center whitespace-nowrap">
                         {isCalling && room.current_hn ? (
-                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-black tracking-wider text-emerald-950">
+                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-black tracking-wider text-emerald-950 whitespace-nowrap">
                             HN {room.current_hn}
                           </div>
                         ) : isConsulting && room.current_hn ? (
-                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-bold tracking-wider text-gray-600">
+                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-bold tracking-wider text-gray-600 whitespace-nowrap">
                             HN {room.current_hn}
                           </div>
                         ) : isBreak ? (
@@ -238,30 +238,30 @@ export default function QueueDisplayPage() {
                       </td>
 
                       {/* Column 2: ห้องให้คำปรึกษา (แสดงเป็นตัวเลขห้อง 1, 2, 3 ตามห้องที่เรียก) */}
-                      <td className="py-6 px-8 text-center">
-                        <div className="inline-flex items-center justify-center font-mono text-5xl md:text-7xl font-black text-gray-800 tracking-tight">
+                      <td className="py-6 px-6 text-center whitespace-nowrap">
+                        <div className="inline-flex items-center justify-center font-mono text-5xl md:text-7xl font-black text-gray-800 tracking-tight whitespace-nowrap">
                           {room.room_no || (room.room_name ? room.room_name.replace(/\D/g, "") : "")}
                         </div>
                       </td>
 
-                      {/* Column 3: สถานะ (ป้ายเด้งดึ๋งนำสายตาแบบเดิม) */}
-                      <td className="py-6 px-8 text-center">
+                      {/* Column 3: สถานะ (ป้ายเด้งดึ๋งนำสายตา ไม่ตัดคำ แถวเดียวเสมอ) */}
+                      <td className="py-6 px-6 text-center whitespace-nowrap">
                         {isCalling ? (
-                          <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-base md:text-lg font-bold bg-emerald-600 text-white animate-bounce shadow-md shadow-emerald-500/30">
+                          <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-base md:text-lg font-bold bg-emerald-600 text-white animate-bounce shadow-md shadow-emerald-500/30 whitespace-nowrap">
                             <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
                             กำลังเรียก..
                           </span>
                         ) : isConsulting ? (
-                          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-base md:text-lg font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                          <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-base md:text-lg font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs whitespace-nowrap">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                             ให้คำปรึกษา
                           </span>
                         ) : isBreak ? (
-                          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-base md:text-lg font-semibold bg-gray-200 text-gray-600 border border-gray-300">
+                          <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-base md:text-lg font-semibold bg-gray-200 text-gray-700 border border-gray-300 whitespace-nowrap">
                             ⏳ ขอเวลาสักครู่
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-base md:text-lg font-semibold bg-gray-100 text-gray-400 border border-gray-200">
+                          <span className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-base md:text-lg font-semibold bg-gray-100 text-gray-400 border border-gray-200 whitespace-nowrap">
                             ว่าง
                           </span>
                         )}
