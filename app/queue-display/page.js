@@ -275,7 +275,7 @@ export default function QueueDisplayPage() {
         </div>
 
         {/* Bottom Waiting Queue Bar */}
-        <div className="mt-6 p-5 rounded-2xl bg-white border border-gray-200 shadow-md flex flex-wrap items-center justify-between gap-4">
+        <div className="mt-6 p-5 md:p-6 rounded-2xl md:rounded-3xl bg-white border border-gray-200 shadow-md flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-wrap">
             <span className="text-lg md:text-xl font-extrabold text-gray-900 flex items-center gap-2 whitespace-nowrap">
               <span>⏳</span> คิวรอตรวจถัดไป:
