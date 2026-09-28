@@ -123,7 +123,7 @@ export default function Header() {
                                 👤 {isBreak && "☕"}
                             </span>
                         </div>
-                        <ul tabIndex={0} className="dropdown-content menu rounded-box z-50 w-60 p-2 shadow-lg bg-base-100 border border-base-200">
+                        <ul tabIndex={0} className="dropdown-content menu rounded-box z-50 w-60 p-2 shadow-lg bg-base-100 border border-base-200 right-0">
                             {user?.nickName && (
                                 <li className="menu-title px-3 py-1.5 text-xs text-gray-500 font-semibold border-b border-base-200 mb-1 flex flex-row items-center justify-between">
                                     <span>ผู้ใช้งาน: {user.nickName}</span>
@@ -148,17 +148,17 @@ export default function Header() {
                                 >
                                     <span className="flex items-center gap-2">
                                         <Coffee width={18} className={isBreak ? "text-emerald-600" : "text-amber-600"} />
-                                        <span className="font-semibold">
-                                            {isBreak ? "พร้อมให้บริการ (ยกเลิกพัก)" : "ขอพัก (ห้องตรวจ)"}
+                                        <span className="font-semibold text-sm">
+                                            {isBreak ? "พร้อมให้บริการ" : "ขอพัก (ห้องตรวจ)"}
                                         </span>
                                     </span>
                                     {loadingBreak ? (
                                         <span className="loading loading-spinner loading-xs text-primary"></span>
                                     ) : (
-                                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap ${
                                             isBreak ? "bg-emerald-200 text-emerald-900" : "bg-amber-200 text-amber-900"
                                         }`}>
-                                            {isBreak ? "กดเข้างาน" : "กดขอพัก"}
+                                            {isBreak ? "เข้างาน" : "ขอพัก"}
                                         </span>
                                     )}
                                 </button>
