@@ -278,10 +278,10 @@ export default function QueueDisplayPage() {
         {/* Right: Waiting Queue Card (1/6 width) */}
         <div className="lg:col-span-1 bg-white rounded-2xl md:rounded-3xl border border-gray-200 shadow-lg p-4 md:p-5 flex flex-col justify-between">
           <div>
-            {/* Header: คิวถัดไป : (เอาป้ายสีเขียวออกตามคำขอของลูกรัก) */}
-            <div className="flex items-center gap-1.5 pb-3 mb-4 border-b border-gray-200">
-              <span className="text-lg">⏳</span>
-              <h2 className="text-sm xl:text-base font-extrabold text-gray-700 whitespace-nowrap">
+            {/* Header: คิวถัดไป : (ฟอนต์ใหญ่ขึ้นตามที่ลูกรักต้องการ) */}
+            <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-200">
+              <span className="text-xl">⏳</span>
+              <h2 className="text-base md:text-lg xl:text-xl font-black text-gray-800 whitespace-nowrap">
                 คิวถัดไป :
               </h2>
             </div>
@@ -291,18 +291,18 @@ export default function QueueDisplayPage() {
                 {queueData.waitingList.slice(0, 6).map((item, idx) => (
                   <div
                     key={item.screening_id || idx}
-                    className={`py-2 px-2 rounded-xl font-mono font-bold text-center text-base xl:text-lg border shadow-xs transition-all whitespace-nowrap ${
+                    className={`py-2.5 px-2 rounded-xl font-mono font-black text-center text-lg xl:text-xl border shadow-xs transition-all whitespace-nowrap ${
                       item.is_priority
                         ? "bg-emerald-50 text-emerald-900 border-emerald-400 ring-2 ring-emerald-300/50"
-                        : "bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
+                        : "bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200"
                     }`}
                   >
                     HN {item.hn}
                   </div>
                 ))}
                 {queueData.waitingList.length > 6 && (
-                  <div className="text-center py-1.5 text-xs text-gray-400 font-semibold bg-gray-50 rounded-lg border border-dashed border-gray-200 whitespace-nowrap">
-                    +{queueData.waitingList.length - 6} คิวรอ
+                  <div className="text-center py-2 text-xs md:text-sm text-gray-500 font-bold bg-gray-50 rounded-xl border border-dashed border-gray-300 whitespace-nowrap">
+                    +{queueData.waitingList.length - 6} คิว
                   </div>
                 )}
               </div>
