@@ -29,6 +29,15 @@ export async function PATCH(req, {params}) {
 
     const result = await startConsultScreenings({ create_by, session_id, source_file,  ...data }, where);
         
+    // Reset staff break status upon taking a patient consultation
+    if (global.staffBreakStore) {
+      global.staffBreakStore.set(Number(create_by), 0);
+    }
+    try {
+      const dbKnex = (await import("@/lib/Knex/dbKnex")).default;
+      await dbKnex('tbl_account').where('user_id', create_by).update({ is_break: 0 });
+    } catch (e) {}
+
     await notifyClients();
 
     return NextResponse.json({ ok: true, data: result });

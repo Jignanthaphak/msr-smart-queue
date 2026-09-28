@@ -40,6 +40,18 @@ export async function modelInspectorScreenings({
 
     const result = await query;
 
-  return result;
+    const breakStore = global.staffBreakStore || new Map();
+    const mapped = (result || []).map((item) => {
+      const obj = item.toJSON ? item.toJSON() : { ...item };
+      const userId = Number(obj.user_id);
+      const memVal = breakStore.get(userId);
+      const isBreak = memVal !== undefined ? memVal : (obj.is_break || 0);
+      return {
+        ...obj,
+        is_break: Number(isBreak) === 1 ? 1 : 0,
+      };
+    });
+
+    return mapped;
 
 }

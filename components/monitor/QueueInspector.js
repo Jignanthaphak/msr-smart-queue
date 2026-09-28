@@ -6,20 +6,23 @@ import { Monitor } from 'lucide-react';
 export default function QueueInspector({ dataInspector = [], loading = false }) {
 
     const [dataLog, setDataLog] = useState([])
-    const [dataStatic, setDataStatic] = useState({ total: 0, completed: 0, remaining: 0 })
+    const [dataStatic, setDataStatic] = useState({ total: 0, completed: 0, remaining: 0, onBreak: 0 })
 
-     useEffect(() => {
-
-        if(dataInspector.length <= 0) return;
+    useEffect(() => {
+        if (!dataInspector) return;
         
-        setDataLog(dataInspector)
+        setDataLog(dataInspector);
 
-        setDataStatic(prev => ({
-            ...prev,
-            total: dataInspector?.length,
-            completed: dataInspector.filter((item) => item?.screenings?.length === 0).length,
-            remaining: dataInspector.filter((item) => item?.screenings?.length > 0).length,
-        }))
+        const onBreakCount = dataInspector.filter((item) => Number(item?.is_break) === 1).length;
+        const busyCount = dataInspector.filter((item) => Number(item?.is_break) !== 1 && item?.screenings?.length > 0).length;
+        const readyCount = dataInspector.filter((item) => Number(item?.is_break) !== 1 && (!item?.screenings || item?.screenings?.length === 0)).length;
+
+        setDataStatic({
+            total: dataInspector.length,
+            completed: readyCount, // ว่าง
+            remaining: busyCount,  // ไม่ว่าง
+            onBreak: onBreakCount, // ขอพัก
+        });
 
     }, [dataInspector])
 
@@ -49,20 +52,32 @@ export default function QueueInspector({ dataInspector = [], loading = false }) 
                                 </td>
                             </tr>
                         ) : dataLog && dataLog.length > 0 ? (
-                            dataLog?.map((item, index) => (
-                                <tr key={index} className="">
-                                
-                                    <td >
-                                        <span className={`status-badge ${item?.screenings?.length > 0 ? "noready": "current"}`}>
-                                            {item?.screenings?.length > 0 ? "ไม่ว่าง" : "ว่าง"} 
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span className="status-badge ">{item?.nickname || "-"}</span>
-                                    </td>
-                                    
-                                </tr>
-                            ))
+                            dataLog.map((item, index) => {
+                                const isOnBreak = Number(item?.is_break) === 1;
+                                const isBusy = !isOnBreak && item?.screenings?.length > 0;
+                                return (
+                                    <tr key={item?.user_id || index} className="">
+                                        <td>
+                                            {isOnBreak ? (
+                                                <span className="status-badge onbreak">
+                                                    ☕ ขอพัก
+                                                </span>
+                                            ) : isBusy ? (
+                                                <span className="status-badge noready">
+                                                    ไม่ว่าง
+                                                </span>
+                                            ) : (
+                                                <span className="status-badge current">
+                                                    ว่าง
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <span className="status-badge">{item?.nickname || "-"}</span>
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         ) : (
                             <tr>
                                 <td colSpan="100%" className="text-center">ไม่มีข้อมูล</td>
@@ -80,11 +95,15 @@ export default function QueueInspector({ dataInspector = [], loading = false }) 
                     </div>
                     <div className="summary-item">
                         <span className="summary-label">ว่าง:</span>
-                        <span className="summary-value">{dataStatic.completed}</span>
+                        <span className="summary-value" style={{ color: '#10b981' }}>{dataStatic.completed}</span>
+                    </div>
+                    <div className="summary-item">
+                        <span className="summary-label">ขอพัก:</span>
+                        <span className="summary-value" style={{ color: '#f59e0b' }}>{dataStatic.onBreak}</span>
                     </div>
                     <div className="summary-item">
                         <span className="summary-label">ไม่ว่าง:</span>
-                        <span className="summary-value">{dataStatic.remaining}</span>
+                        <span className="summary-value" style={{ color: '#ef4444' }}>{dataStatic.remaining}</span>
                     </div>
                 </div>
             </div>

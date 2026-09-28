@@ -1888,6 +1888,14 @@ input.form-input.disabled::placeholder {
   color: hsl(var(--muted-foreground));
 }
 
+.status-badge.onbreak {
+  background-color: #f59e0b;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(245, 158, 11, 0.45);
+  animation: pulse 2s infinite;
+}
+
 .queue-summary {
   display: flex;
   justify-content: space-around;
