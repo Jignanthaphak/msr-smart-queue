@@ -33,6 +33,7 @@ export default function ReadThaIDModal({ onSuccess }) {
   const [status, setStatus] = useState("idle"); // idle, loading, ready, completed, error, expired
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [requestId, setRequestId] = useState("");
+  const [refCode, setRefCode] = useState("");
   const [countdown, setCountdown] = useState(300);
   const [errorMessage, setErrorMessage] = useState("");
   const [receivedPerson, setReceivedPerson] = useState(null);
@@ -52,6 +53,7 @@ export default function ReadThaIDModal({ onSuccess }) {
     setStatus("idle");
     setQrDataUrl("");
     setRequestId("");
+    setRefCode("");
     setErrorMessage("");
     setReceivedPerson(null);
   };
@@ -76,6 +78,7 @@ export default function ReadThaIDModal({ onSuccess }) {
     setStatus("loading");
     setErrorMessage("");
     setReceivedPerson(null);
+    setRefCode("");
 
     try {
       const basePath = clientConfig.base_path || "/msr";
@@ -91,6 +94,7 @@ export default function ReadThaIDModal({ onSuccess }) {
 
       setQrDataUrl(json.qrDataUrl);
       setRequestId(json.requestId);
+      setRefCode(json.refCode || "");
       setStatus("ready");
 
       // คำนวณเวลาที่เหลือ
@@ -207,6 +211,14 @@ export default function ReadThaIDModal({ onSuccess }) {
                   className="w-56 h-56 object-contain rounded-xl"
                 />
               </div>
+
+              {/* Reference Code badge */}
+              {refCode && (
+                <div className="bg-amber-50 border border-amber-300 rounded-lg px-3.5 py-1 flex items-center gap-2 shadow-sm">
+                  <span className="text-[12px] text-amber-800 font-medium">รหัสอ้างอิง:</span>
+                  <span className="text-base font-black text-amber-900 tracking-widest font-mono">{refCode}</span>
+                </div>
+              )}
 
               {/* Countdown badge */}
               <div className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
