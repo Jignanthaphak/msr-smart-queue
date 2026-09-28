@@ -101,7 +101,7 @@ export default function QueueDisplayPage() {
           <img
             src="/images/Logo-mhc4.png"
             alt="โลโก้ศูนย์สุขภาพจิตที่ 4"
-            className="h-14 md:h-16 w-auto max-h-16 object-contain drop-shadow-xs"
+            className="h-16 md:h-20 w-auto max-h-20 object-contain drop-shadow-xs"
             onError={(e) => {
               if (!e.target.dataset.triedImage) {
                 e.target.dataset.triedImage = "true";
@@ -112,13 +112,16 @@ export default function QueueDisplayPage() {
               }
             }}
           />
-          <div>
-            <h1 className="text-xl md:text-2xl font-black tracking-tight text-gray-900 leading-tight">
+          <div className="flex flex-col justify-center">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-black tracking-tight text-gray-900 leading-tight">
               ศูนย์สุขภาพจิตที่ 4
             </h1>
-            <p className="text-sm md:text-base text-gray-500 font-semibold tracking-normal mt-0.5">
+            <div className="text-sm md:text-base font-bold text-gray-700 leading-snug">
+              กรมสุขภาพจิต กระทรวงสาธารณสุข
+            </div>
+            <div className="text-xs md:text-sm text-gray-400 font-medium tracking-normal mt-0.5">
               ระบบคิวบริการให้การปรึกษาด้านสุขภาพจิต
-            </p>
+            </div>
           </div>
         </div>
 
