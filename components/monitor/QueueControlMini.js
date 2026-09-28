@@ -237,8 +237,12 @@ export default function QueueControlMini() {
                     }
                   >
                     {/* Room info */}
-                    <td className="py-2.5 px-3 font-semibold text-gray-800">
-                      <div>{room.room_name}</div>
+                    <td className="py-2.5 px-3 font-semibold text-gray-800 whitespace-nowrap">
+                      <div className="text-sm font-bold text-gray-900">
+                        {String(room.room_name || room.room_no || "")
+                          .replace(/^ห้องคอนเซาท์\s*/i, "")
+                          .trim() || room.room_no}
+                      </div>
                       <div className="text-[11px] text-gray-500 font-normal">
                         ผู้ให้คำปรึกษา: {room.staff_name || "-"}
                       </div>

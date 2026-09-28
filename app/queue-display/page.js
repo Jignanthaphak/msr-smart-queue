@@ -103,16 +103,23 @@ export default function QueueDisplayPage() {
       <header className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 p-4 md:p-6 mb-6 flex items-center justify-between gap-4 md:gap-6 shadow-md">
         <div className="flex items-center gap-3 md:gap-4 min-w-0">
           <img
-            src="/images/Logo-mhc4.png"
+            src={`${(clientConfig?.base_path !== undefined && clientConfig?.base_path !== null) ? clientConfig.base_path : "/msr"}/images/Logo-mhc4.png`}
             alt="โลโก้ศูนย์สุขภาพจิตที่ 4"
             className="h-14 md:h-16 lg:h-20 w-auto max-h-20 shrink-0 object-contain drop-shadow-xs"
             onError={(e) => {
-              if (!e.target.dataset.triedImage) {
-                e.target.dataset.triedImage = "true";
-                e.target.src = "/image/Logo-mhc4.png";
-              } else if (!e.target.dataset.triedFallback) {
-                e.target.dataset.triedFallback = "true";
-                e.target.src = "/images/logo_transparent_cropped.png";
+              const bp = (clientConfig?.base_path !== undefined && clientConfig?.base_path !== null) ? clientConfig.base_path : "/msr";
+              if (!e.target.dataset.tried1) {
+                e.target.dataset.tried1 = "true";
+                e.target.src = `${bp}/image/Logo-mhc4.png`;
+              } else if (!e.target.dataset.tried2) {
+                e.target.dataset.tried2 = "true";
+                e.target.src = `${bp}/Logo-mhc4.png`;
+              } else if (!e.target.dataset.tried3) {
+                e.target.dataset.tried3 = "true";
+                e.target.src = "/images/Logo-mhc4.png";
+              } else if (!e.target.dataset.tried4) {
+                e.target.dataset.tried4 = "true";
+                e.target.src = `${bp}/images/Logo_msr_top2.png`;
               }
             }}
           />

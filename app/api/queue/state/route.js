@@ -38,9 +38,14 @@ global.notifyQueueClients = async function () {
 export async function getQueueData() {
   const today = date();
   const config = global.smartQueueConfig || {
-    active_rooms: 3,
+    active_rooms: 4,
     delay_seconds: 30,
-    room_assignments: [],
+    room_assignments: [
+      { room_no: 1, room_name: "1", user_id: null, nickname: "" },
+      { room_no: 2, room_name: "2", user_id: null, nickname: "" },
+      { room_no: 3, room_name: "3", user_id: null, nickname: "" },
+      { room_no: 4, room_name: "4", user_id: null, nickname: "" },
+    ],
   };
 
   const breakStore = global.staffBreakStore || new Map();
@@ -99,14 +104,14 @@ export async function getQueueData() {
   ];
 
   // 3) Construct rooms state based on config & active consultations
-  const numRooms = config.active_rooms || 3;
+  const numRooms = config.active_rooms || 4;
   const assignments = config.room_assignments || [];
   const roomResults = [];
 
   for (let i = 1; i <= numRooms; i++) {
     const assign = assignments.find((a) => Number(a.room_no) === i) || {
       room_no: i,
-      room_name: `ห้องคอนเซาท์ ${i}`,
+      room_name: `${i}`,
       user_id: null,
       nickname: "",
     };
@@ -175,7 +180,7 @@ export async function getQueueData() {
 
     roomResults.push({
       room_no: i,
-      room_name: assign.room_name || `ห้องคอนเซาท์ ${i}`,
+      room_name: assign.room_name || `${i}`,
       staff_id: staffId,
       staff_name: assign.nickname || "-",
       status: currentStatus,
@@ -219,7 +224,7 @@ export async function POST(req) {
       const hn = String(body.hn || "").trim();
       const patientName = String(body.patient_name || "").trim();
       const screeningId = Number(body.screening_id) || null;
-      const roomName = String(body.room_name || `ห้องคอนเซาท์ ${roomNo}`);
+      const roomName = String(body.room_name || `${roomNo}`);
       const staffName = String(body.staff_name || "");
 
       global.smartQueueState.rooms[roomNo] = {
@@ -247,7 +252,7 @@ export async function POST(req) {
       if (current && current.current_hn) {
         global.smartQueueState.lastCall = {
           room_no: roomNo,
-          room_name: current.room_name || `ห้องคอนเซาท์ ${roomNo}`,
+          room_name: current.room_name || `${roomNo}`,
           staff_name: current.staff_name || "",
           hn: current.current_hn,
           patient_name: current.patient_name || "",
