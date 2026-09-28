@@ -416,6 +416,7 @@ const FormPerson = forwardRef(({ personData, disabledForm = true, onChangeFormPe
                                 placeholder="" 
                             />
                         </div>
+                        {/* ซ่อนข้อมูลสำคัญชั่วคราวตามที่เจ้าหน้าที่ร้องขอ (คอลัมน์ในฐานข้อมูลยังคงอยู่ เผื่อนำกลับมาใช้ในอนาคต)
                         <div className="form-group textarea-group">
                             <label htmlFor="person_form_important_information">ข้อมูลสำคัญ</label>
                             <Textarea  
@@ -430,6 +431,7 @@ const FormPerson = forwardRef(({ personData, disabledForm = true, onChangeFormPe
                                 rows={5}
                             />
                         </div>
+                        */}
                     </div>
                 </div>
 
