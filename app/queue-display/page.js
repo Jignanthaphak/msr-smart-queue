@@ -114,10 +114,10 @@ export default function QueueDisplayPage() {
           />
           <div>
             <h1 className="text-xl md:text-2xl font-black tracking-tight text-gray-900 leading-tight">
-              ศูนย์สุขภาพจิตที่ 4 กรมสุขภาพจิต กระทรวงสาธารณสุข
+              ศูนย์สุขภาพจิตที่ 4
             </h1>
             <p className="text-sm md:text-base text-gray-500 font-semibold tracking-normal mt-0.5">
-              ระบบเรียกคิวบริการให้การปรึกษาด้านสุขภาพจิต
+              ระบบคิวบริการให้การปรึกษาด้านสุขภาพจิต
             </p>
           </div>
         </div>
