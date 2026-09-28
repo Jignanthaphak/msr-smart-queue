@@ -92,48 +92,56 @@ export async function GET(req) {
       }
     }
 
-    const VERIFIED_CLIENT_ID = "clN3cXlFTUtaTDZtSXdtSWN5Nno0OXcxdkg1YXVLa2g";
-    const VERIFIED_CLIENT_SECRET = "alNFeDJwQTV4YXAxRVNlQjB2em9pQUtIcFluSEY0SUtZQmxCNE9lVg";
-    const VERIFIED_API_KEY = "WP5KkTWML653rEiy6RI2Stx7a5M90cyl9ZNS7XQA";
+    // Staff Login Credentials ("ระบบบันทึกการคัดกรองสุขภาพจิต")
+    const STAFF_CLIENT_ID = process.env.THAID_LOGIN_CLIENT_ID || "ZVJ3NGUxdU9haERkMURaVTNKUTZDdWtBa092bDhpYnc";
+    const STAFF_CLIENT_SECRET = process.env.THAID_LOGIN_CLIENT_SECRET || "bmJoN2RmTjN3c2lNcHBub3RVOE5VMlhCR0pNY2ZudnNzNkw2WXg4Mg";
+    const STAFF_API_KEY = process.env.THAID_LOGIN_API_KEY || "xk0eskMa1NsuBqQuf5GVdvOLYBswNgbSZFLLn4gH";
 
-    let clientId = process.env.THAID_CLIENT_ID || VERIFIED_CLIENT_ID;
-    if (!clientId || clientId.includes("clN3cIFTU")) {
-      clientId = VERIFIED_CLIENT_ID;
-    }
+    // Screening Credentials ("ลงทะเบียนตรวจความเครียด")
+    const SCREENING_CLIENT_ID = "clN3cXlFTUtaTDZtSXdtSWN5Nno0OXcxdkg1YXVLa2g";
+    const SCREENING_CLIENT_SECRET = "alNFeDJwQTV4YXAxRVNlQjB2em9pQUtIcFluSEY0SUtZQmxCNE9lVg";
+    const SCREENING_API_KEY = "WP5KkTWML653rEiy6RI2Stx7a5M90cyl9ZNS7XQA";
 
-    let clientSecret = process.env.THAID_CLIENT_SECRET || VERIFIED_CLIENT_SECRET;
-    if (!clientSecret || clientSecret.includes("QUtlcFluSEYw") || clientSecret.includes("SEYw")) {
-      clientSecret = VERIFIED_CLIENT_SECRET;
-    }
-
-    let apiKey = process.env.THAID_API_KEY || VERIFIED_API_KEY;
-    const redirectUri = process.env.THAID_REDIRECT_URI || "https://mhc4.dmh.go.th/msr/api/auth/thaid/callback";
+    const redirectUri = process.env.THAID_LOGIN_REDIRECT_URI || process.env.THAID_REDIRECT_URI || "https://mhc4.dmh.go.th/msr/api/auth/thaid/callback";
     const tokenUrl = process.env.THAID_TOKEN_URL || "https://imauth.bora.dopa.go.th/api/v2/oauth2/token/";
     const userInfoUrl = process.env.THAID_USERINFO_URL || "https://imauth.bora.dopa.go.th/api/v2/oauth2/userinfo/";
 
-    // 1) Exchange Authorization Code for Access Token
-    const authHeader = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`;
-    const tokenBody = new URLSearchParams({
-      grant_type: "authorization_code",
-      code: code,
-      redirect_uri: redirectUri,
-      client_id: clientId,
-      client_secret: clientSecret,
-    });
+    // 1) Exchange Authorization Code for Access Token (Try Staff credentials first, then Screening credentials)
+    let tokenResponse = null;
+    let apiKey = STAFF_API_KEY;
 
-    const tokenHeaders = {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: authHeader,
-    };
-    if (apiKey) {
-      tokenHeaders["x-api-key"] = apiKey;
+    for (const cred of [
+      { cid: STAFF_CLIENT_ID, sec: STAFF_CLIENT_SECRET, key: STAFF_API_KEY },
+      { cid: SCREENING_CLIENT_ID, sec: SCREENING_CLIENT_SECRET, key: SCREENING_API_KEY },
+    ]) {
+      const authHeader = `Basic ${Buffer.from(`${cred.cid}:${cred.sec}`).toString("base64")}`;
+      const tokenBody = new URLSearchParams({
+        grant_type: "authorization_code",
+        code: code,
+        redirect_uri: redirectUri,
+        client_id: cred.cid,
+        client_secret: cred.sec,
+      });
+
+      const tokenHeaders = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: authHeader,
+      };
+      if (cred.key) {
+        tokenHeaders["x-api-key"] = cred.key;
+      }
+
+      tokenResponse = await fetch(tokenUrl, {
+        method: "POST",
+        headers: tokenHeaders,
+        body: tokenBody.toString(),
+      });
+
+      if (tokenResponse.ok) {
+        apiKey = cred.key;
+        break;
+      }
     }
-
-    const tokenResponse = await fetch(tokenUrl, {
-      method: "POST",
-      headers: tokenHeaders,
-      body: tokenBody.toString(),
-    });
 
     if (!tokenResponse.ok) {
       const errText = await tokenResponse.text();

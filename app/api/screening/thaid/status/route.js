@@ -6,7 +6,7 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   
   if (searchParams.get("ping")) {
-    return NextResponse.json({ success: true, version: "v2026.09.28-1930", time: Date.now() });
+    return NextResponse.json({ success: true, version: "v2026.09.28-2020", time: Date.now() });
   }
 
   const requestId = searchParams.get("requestId");

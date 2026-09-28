@@ -25,17 +25,14 @@ export async function GET(req) {
   const origin = getPublicOrigin(req);
 
   try {
-    const VERIFIED_CLIENT_ID = "clN3cXlFTUtaTDZtSXdtSWN5Nno0OXcxdkg1YXVLa2g";
-    let clientId = process.env.THAID_CLIENT_ID || VERIFIED_CLIENT_ID;
-    if (!clientId || clientId.includes("clN3cIFTU")) {
-      clientId = VERIFIED_CLIENT_ID;
-    }
+    const STAFF_LOGIN_CLIENT_ID = "ZVJ3NGUxdU9haERkMURaVTNKUTZDdWtBa092bDhpYnc";
+    let clientId = process.env.THAID_LOGIN_CLIENT_ID || STAFF_LOGIN_CLIENT_ID;
 
-    const redirectUri = process.env.THAID_REDIRECT_URI || "https://mhc4.dmh.go.th/msr/api/auth/thaid/callback";
+    const redirectUri = process.env.THAID_LOGIN_REDIRECT_URI || process.env.THAID_REDIRECT_URI || "https://mhc4.dmh.go.th/msr/api/auth/thaid/callback";
     const authUrlBase = process.env.THAID_AUTH_URL || "https://imauth.bora.dopa.go.th/api/v2/oauth2/auth/";
     const scope =
-      process.env.THAID_SCOPE ||
-      "openid pid title given_name family_name title_en given_name_en family_name_en birthdate gender address ial";
+      process.env.THAID_LOGIN_SCOPE ||
+      "openid pid title given_name family_name name ial";
 
     // Generate secure random state for CSRF protection
     const state = randomBytes(32).toString("hex");
