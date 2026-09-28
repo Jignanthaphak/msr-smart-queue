@@ -216,7 +216,7 @@ export default function QueueDisplayPage() {
                             HN {room.current_hn}
                           </div>
                         ) : isConsulting && room.current_hn ? (
-                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-bold tracking-wider text-gray-500">
+                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-bold tracking-wider text-gray-700">
                             HN {room.current_hn}
                           </div>
                         ) : isBreak ? (
