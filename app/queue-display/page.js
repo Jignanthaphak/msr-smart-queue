@@ -233,10 +233,10 @@ export default function QueueDisplayPage() {
                         </div>
                       </td>
 
-                      {/* Column 3: สถานะ (ป้ายกระพริบนำสายตาอย่างเดียว) */}
+                      {/* Column 3: สถานะ (ป้ายเด้งดึ๋งนำสายตาแบบเดิม) */}
                       <td className="py-6 px-8 text-center">
                         {isCalling ? (
-                          <span className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full text-base md:text-lg font-bold bg-emerald-600 text-white animate-pulse shadow-lg shadow-emerald-500/30">
+                          <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-base md:text-lg font-bold bg-emerald-600 text-white animate-bounce shadow-md shadow-emerald-500/30">
                             <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
                             กำลังเรียก..
                           </span>
