@@ -116,8 +116,8 @@ export default function QueueDisplayPage() {
             <h1 className="text-xl md:text-2xl lg:text-3xl font-black tracking-tight text-gray-900 leading-tight">
               ศูนย์สุขภาพจิตที่ 4 กรมสุขภาพจิต กระทรวงสาธารณสุข
             </h1>
-            <div className="text-sm md:text-base text-emerald-600 font-extrabold tracking-wide mt-1 flex items-center gap-1.5">
-              <span className="text-amber-400 text-base md:text-lg">✨</span>
+            <div className="text-base md:text-lg lg:text-xl text-emerald-600 font-extrabold tracking-wide mt-1.5 flex items-center gap-2">
+              <span className="text-amber-400 text-lg md:text-xl">✨</span>
               <span>ระบบคิวบริการให้การปรึกษาด้านสุขภาพจิต</span>
             </div>
           </div>
