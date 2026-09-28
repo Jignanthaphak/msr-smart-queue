@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import clientConfig from "@/config/Client";
 import { announceQueue, playHospitalChime } from "@/lib/utils/queueAudio";
-import { Monitor, Volume2, VolumeX, Maximize, Clock } from "lucide-react";
+import { Maximize, Clock } from "lucide-react";
 
 export default function QueueDisplayPage() {
   const [queueData, setQueueData] = useState({ rooms: [], waitingList: [], lastCall: null });
@@ -76,16 +76,17 @@ export default function QueueDisplayPage() {
     return () => evtSource.close();
   }, [audioEnabled]);
 
-  const handleToggleAudio = async () => {
+  const ensureAudioEnabled = async () => {
     if (!audioEnabled) {
-      await playHospitalChime();
-      setAudioEnabled(true);
-    } else {
-      setAudioEnabled(false);
+      try {
+        await playHospitalChime();
+        setAudioEnabled(true);
+      } catch (_) {}
     }
   };
 
   const handleToggleFullscreen = () => {
+    ensureAudioEnabled();
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     } else {
@@ -94,7 +95,10 @@ export default function QueueDisplayPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans select-none p-4 md:p-6 lg:p-8">
+    <div
+      onClick={ensureAudioEnabled}
+      className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans select-none p-4 md:p-6 lg:p-8"
+    >
       {/* Top Header Bar: Separate Floating Card */}
       <header className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 p-5 md:p-6 mb-6 flex flex-wrap items-center justify-between gap-4 shadow-md">
         <div className="flex items-center gap-4">
@@ -124,36 +128,22 @@ export default function QueueDisplayPage() {
         </div>
 
         {/* Clock & Controls */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <div className="text-right">
-            <div className="text-2xl md:text-3xl font-black font-mono tracking-wider text-emerald-600 flex items-center gap-2 justify-end">
-              <Clock className="w-5 h-5 text-gray-400" />
-              {currentTime || "--:--:--"}
+            <div className="text-3xl md:text-4xl lg:text-5xl font-black font-mono tracking-wider text-emerald-600 flex items-center gap-2.5 justify-end">
+              <Clock className="w-6 h-6 md:w-8 md:h-8 text-gray-400" />
+              <span>{currentTime || "--:--:--"}</span>
             </div>
-            <div className="text-xs text-gray-500 font-medium">{currentDate}</div>
+            <div className="text-xs md:text-sm text-gray-500 font-semibold mt-1">{currentDate}</div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleToggleAudio}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${
-                audioEnabled
-                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                  : "bg-amber-500 hover:bg-amber-600 text-white animate-pulse"
-              }`}
-            >
-              {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              {audioEnabled ? "เสียงประกาศ: เปิดอยู่" : "คลิกเพื่อเปิดเสียงประกาศ"}
-            </button>
-
-            <button
-              onClick={handleToggleFullscreen}
-              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-200 transition-colors"
-              title="เต็มจอ (Fullscreen)"
-            >
-              <Maximize className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={handleToggleFullscreen}
+            className="p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 border border-gray-200 transition-colors shadow-2xs"
+            title="เต็มจอ (Fullscreen)"
+          >
+            <Maximize className="w-5 h-5" />
+          </button>
         </div>
       </header>
 
