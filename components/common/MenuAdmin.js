@@ -9,6 +9,7 @@ import {
   PieChartOutlined,
   TeamOutlined,
   UserOutlined,
+  SoundOutlined,
 } from "@ant-design/icons";
 
 const getItem = (label, key, icon, children) => ({
@@ -28,6 +29,7 @@ const items = [
   getItem("การจัดการข้อมูลเบื้องต้น", "/admin/datadefalut", <UserOutlined />),
   getItem("ข้อมูลผู้รับบริการ", "/admin/person", <UserOutlined />),
   getItem("ข้อมูลการตรวจ", "/admin/screening", <UserOutlined />),
+  getItem("ตั้งค่าระบบคิวออกหน่วย", "/admin/queue-setting", <SoundOutlined />),
   getItem("ข้อมูลการเข้าสู่ระบบ/ออกจากระบบ", "/admin/authlog", <UserOutlined />),
   getItem("สถิติการใช้ AI", "/admin/ai-dashboard", <PieChartOutlined />),
   getItem("กลับสู่หน้าหลัก", "/", <UserOutlined />),

@@ -4,6 +4,7 @@ import { useState, useEffect  } from "react";
 import QueuePerson from '@/components/monitor/QueuePerson';
 import QueueInspector from '@/components/monitor/QueueInspector';
 import TableHistoryScreening from '@/components/monitor/HistoryScreening/TableHistoryScreening';
+import QueueControlMini from '@/components/monitor/QueueControlMini';
 import clientConfig from "@/config/Client";
 
 export default function MonitorPanel() {
@@ -51,6 +52,7 @@ export default function MonitorPanel() {
             <QueuePerson dataScreening={dataExten.screenings} loading={loading} />
             <QueueInspector dataInspector={dataExten.inspector} loading={loading} />
             <TableHistoryScreening />
+            <QueueControlMini />
         </div>
 
     </>
