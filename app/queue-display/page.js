@@ -100,13 +100,13 @@ export default function QueueDisplayPage() {
       onClick={ensureAudioEnabled}
       className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans select-none p-4 md:p-6 lg:p-8"
     >
-      {/* Top Header Bar: Single Horizontal Row, Never Wraps, Compact & Balanced for TV */}
-      <header className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 py-3 px-4 md:py-3.5 md:px-6 mb-4 md:mb-5 flex items-center justify-between gap-4 md:gap-6 shadow-sm">
-        <div className="flex items-center gap-3 md:gap-4 min-w-0">
+      {/* Top Header Bar: Single Horizontal Row, Never Wraps, Logo scaled to room number height */}
+      <header className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 py-3.5 px-5 md:py-4 md:px-6 mb-4 md:mb-5 flex items-center justify-between gap-4 md:gap-6 shadow-sm">
+        <div className="flex items-center gap-3.5 md:gap-4.5 min-w-0">
           <img
             src={`${(clientConfig?.base_path !== undefined && clientConfig?.base_path !== null) ? clientConfig.base_path : "/msr"}/images/Logo-mhc4.png`}
             alt="โลโก้ศูนย์สุขภาพจิตที่ 4"
-            className="h-10 md:h-11 lg:h-12 w-auto max-h-12 shrink-0 object-contain drop-shadow-xs"
+            className="h-16 md:h-[68px] lg:h-[72px] w-auto max-h-[72px] shrink-0 object-contain drop-shadow-xs"
             onError={(e) => {
               const bp = (clientConfig?.base_path !== undefined && clientConfig?.base_path !== null) ? clientConfig.base_path : "/msr";
               if (!e.target.dataset.tried1) {
@@ -128,11 +128,11 @@ export default function QueueDisplayPage() {
             }}
           />
           <div className="min-w-0">
-            <h1 className="text-base md:text-lg lg:text-xl xl:text-2xl font-black tracking-tight text-gray-900 leading-tight whitespace-nowrap">
+            <h1 className="text-lg md:text-xl lg:text-2xl xl:text-[26px] font-black tracking-tight text-gray-900 leading-snug whitespace-nowrap">
               ศูนย์สุขภาพจิตที่ 4 กรมสุขภาพจิต กระทรวงสาธารณสุข
             </h1>
-            <div className="text-xs md:text-sm lg:text-base text-emerald-600 font-extrabold tracking-wide mt-0.5 flex items-center gap-1.5 whitespace-nowrap">
-              <span className="text-amber-400 text-sm md:text-base">✨</span>
+            <div className="text-sm md:text-base lg:text-lg text-emerald-600 font-extrabold tracking-wide mt-1 flex items-center gap-2 whitespace-nowrap">
+              <span className="text-amber-400 text-base md:text-lg">✨</span>
               <span>ระบบคิวบริการให้การปรึกษาด้านสุขภาพจิต</span>
             </div>
           </div>
