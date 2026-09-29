@@ -29,6 +29,20 @@ export async function PATCH(req, {params}) {
 
     const result = await closeConsultScreenings({ create_by, session_id, source_file,  ...data }, where);
         
+    // Clear the room in Smart Queue state so it immediately transitions to empty on TV and monitor
+    if (global.smartQueueState?.rooms) {
+      Object.keys(global.smartQueueState.rooms).forEach((rNo) => {
+        const r = global.smartQueueState.rooms[rNo];
+        if (
+          r &&
+          (Number(r.current_screening_id) === Number(data.screening_id) ||
+           String(r.current_hn).trim() === String(result?.hn || "").trim())
+        ) {
+          delete global.smartQueueState.rooms[rNo];
+        }
+      });
+    }
+
     await notifyClients();
     if (global.notifyQueueClients) {
       await global.notifyQueueClients();

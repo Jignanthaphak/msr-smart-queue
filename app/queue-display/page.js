@@ -8,9 +8,14 @@ import { Maximize, Clock } from "lucide-react";
 export default function QueueDisplayPage() {
   const [queueData, setQueueData] = useState({ rooms: [], waitingList: [], lastCall: null });
   const [audioEnabled, setAudioEnabled] = useState(false);
+  const audioEnabledRef = useRef(false);
   const [currentTime, setCurrentTime] = useState("");
   const [currentDate, setCurrentDate] = useState("");
   const lastCallTimestampRef = useRef(0);
+
+  useEffect(() => {
+    audioEnabledRef.current = audioEnabled;
+  }, [audioEnabled]);
 
   // Digital Clock
   useEffect(() => {
@@ -37,45 +42,80 @@ export default function QueueDisplayPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Real-time SSE Connection
-  useEffect(() => {
-    const evtSource = new EventSource(clientConfig.backend_url + "/queue/stream");
+  const updateFromPayload = (payload) => {
+    if (!payload) return;
+    setQueueData(payload);
 
-    evtSource.onmessage = (e) => {
-      try {
-        const raw = JSON.parse(e.data);
-        const payload = raw?.payload ?? raw;
-        if (payload) {
-          setQueueData(payload);
+    // Check if there is a new call to announce
+    if (
+      payload.lastCall &&
+      payload.lastCall.timestamp &&
+      payload.lastCall.timestamp > lastCallTimestampRef.current
+    ) {
+      lastCallTimestampRef.current = payload.lastCall.timestamp;
+      if (audioEnabledRef.current) {
+        announceQueue({
+          hn: payload.lastCall.hn,
+          roomName: payload.lastCall.room_name,
+          staffName: payload.lastCall.staff_name,
+          basePath: clientConfig?.base_path || "/msr",
+        });
+      }
+    }
+  };
 
-          // Check if there is a new call to announce
-          if (
-            payload.lastCall &&
-            payload.lastCall.timestamp &&
-            payload.lastCall.timestamp > lastCallTimestampRef.current
-          ) {
-            lastCallTimestampRef.current = payload.lastCall.timestamp;
-            if (audioEnabled) {
-              announceQueue({
-                hn: payload.lastCall.hn,
-                roomName: payload.lastCall.room_name,
-                staffName: payload.lastCall.staff_name,
-                basePath: clientConfig?.base_path || "/msr",
-              });
-            }
-          }
+  const fetchQueueData = async () => {
+    try {
+      const res = await fetch(`${clientConfig.backend_url}/queue/state`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success) {
+          updateFromPayload(data);
         }
-      } catch (err) {
-        console.error("Queue SSE parse error:", err);
+      }
+    } catch (err) {
+      // Network hiccup - ignore
+    }
+  };
+
+  // 1) Initial fetch and 3s Polling fallback (Ensures TV screen stays fresh even if SSE drops)
+  useEffect(() => {
+    fetchQueueData();
+    const interval = setInterval(fetchQueueData, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 2) Real-time SSE Connection
+  useEffect(() => {
+    let evtSource = null;
+    try {
+      evtSource = new EventSource(clientConfig.backend_url + "/queue/stream");
+
+      evtSource.onmessage = (e) => {
+        try {
+          const raw = JSON.parse(e.data);
+          const payload = raw?.payload ?? raw;
+          if (payload) {
+            updateFromPayload(payload);
+          }
+        } catch (err) {
+          console.error("Queue SSE parse error:", err);
+        }
+      };
+
+      evtSource.onerror = (err) => {
+        console.error("Queue SSE error:", err);
+      };
+    } catch (err) {
+      console.error("Failed to initialize SSE:", err);
+    }
+
+    return () => {
+      if (evtSource) {
+        evtSource.close();
       }
     };
-
-    evtSource.onerror = (err) => {
-      console.error("Queue SSE error:", err);
-    };
-
-    return () => evtSource.close();
-  }, [audioEnabled]);
+  }, []);
 
   const ensureAudioEnabled = async () => {
     if (!audioEnabled) {

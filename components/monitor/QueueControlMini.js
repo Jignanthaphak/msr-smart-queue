@@ -37,9 +37,11 @@ export default function QueueControlMini() {
     return () => evtSource.close();
   }, []);
 
-  // 2) Initial fetch
+  // 2) Initial fetch + 3s Polling fallback (Ensures mini control stays in sync)
   useEffect(() => {
     fetchState();
+    const interval = setInterval(fetchState, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchState = async () => {

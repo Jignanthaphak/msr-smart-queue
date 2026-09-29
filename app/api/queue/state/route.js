@@ -74,6 +74,21 @@ export async function getQueueData() {
     console.error("Fetch todayScreenings error:", e.message);
   }
 
+  // Pre-clean: Check all rooms in memory. If any room's patient has finished consult (status_id >= 4) or is not active, clear that room!
+  Object.keys(global.smartQueueState?.rooms || {}).forEach((roomNo) => {
+    const r = global.smartQueueState.rooms[roomNo];
+    if (r && (r.current_hn || r.current_screening_id)) {
+      const scr = todayScreenings.find(
+        (s) =>
+          (r.current_screening_id && Number(s.screening_id) === Number(r.current_screening_id)) ||
+          (r.current_hn && String(s.hn).trim() === String(r.current_hn).trim())
+      );
+      if (!scr || Number(scr.status_id) >= 4) {
+        delete global.smartQueueState.rooms[roomNo];
+      }
+    }
+  });
+
   // Collect all HNs and screening_ids currently active in ANY room (calling, consulting, or walkin)
   const activeRoomHns = new Set();
   const activeRoomScreeningIds = new Set();
