@@ -831,19 +831,17 @@ export default function QueueControlMini() {
             <Pause className="w-3.5 h-3.5 text-amber-600" />
             คิวที่พักไว้ชั่วคราว (Held Queues): {queueState.heldList?.length || 0} ราย
           </span>
-          <button
-            onClick={handleAdvanceHold}
-            disabled={loading || !queueState.waitingList?.length}
-            className={`btn btn-xs ${
-              queueState.waitingList?.length
-                ? "bg-amber-600 hover:bg-amber-700 text-white shadow-2xs"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
-            } py-0 px-2.5 h-6 flex items-center gap-1 font-semibold`}
-            title="เลือกผู้รับบริการจากคิวรอตรวจเพื่อพักคิวล่วงหน้า (เช่น แจ้งติดประชุม)"
-          >
-            <PlusCircle className="w-3.5 h-3.5" />
-            <span>➕ พักคิวล่วงหน้า</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleAdvanceHold}
+              disabled={loading}
+              className="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white shadow-xs py-0 px-2.5 h-6 flex items-center gap-1 font-semibold border-0"
+              title="กรอก HN เพื่อพักคิวล่วงหน้า (เช่น ผู้รับบริการแจ้งติดประชุม)"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>พักคิวล่วงหน้า</span>
+            </button>
+          )}
         </div>
 
         {queueState.heldList && queueState.heldList.length > 0 ? (
