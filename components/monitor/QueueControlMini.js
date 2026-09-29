@@ -53,20 +53,32 @@ export default function QueueControlMini() {
     }
   };
 
-  // 3) Call Next Queue to a Room
+  // 3) Call Next Queue to a Room (ข้ามคิวที่ถูกเรียกหรืออยู่ในห้องอื่นอยู่แล้วอัตโนมัติ)
   const handleCallNext = async (room) => {
-    if (!queueState.waitingList || queueState.waitingList.length === 0) {
+    // รวบรวม HN ที่กำลังถูกเรียก หรือกำลังตรวจในห้องอื่นอยู่แล้ว
+    const busyHns = new Set(
+      (queueState.rooms || [])
+        .filter((r) => r.current_hn && r.status !== "empty" && r.status !== "break")
+        .map((r) => String(r.current_hn).trim())
+    );
+
+    // ดึงเฉพาะผู้รับบริการที่ยังว่าง ไม่ได้ถูกห้องใดเรียกอยู่
+    const availablePatients = (queueState.waitingList || []).filter(
+      (p) => !busyHns.has(String(p.hn).trim())
+    );
+
+    if (availablePatients.length === 0) {
       Swal.fire({
         icon: "info",
         title: "ไม่มีคิวรอรับบริการ",
-        text: "ขณะนี้ยังไม่มีผู้รับบริการที่รอตรวจให้เรียกเข้าห้องค่ะ",
+        text: "ขณะนี้ยังไม่มีผู้รับบริการที่รอตรวจให้เรียกเข้าห้องค่ะ (ผู้รับบริการคนอื่นกำลังถูกเรียกหรืออยู่ในห้องตรวจแล้ว)",
         confirmButtonText: "ตกลง",
         confirmButtonColor: "#10b981",
       });
       return;
     }
 
-    const nextPatient = queueState.waitingList[0];
+    const nextPatient = availablePatients[0];
     setLoading(true);
     try {
       const res = await callQueue({

@@ -74,21 +74,46 @@ export async function getQueueData() {
     console.error("Fetch todayScreenings error:", e.message);
   }
 
-  // 2) Derive waiting list (status_id = 2 "รอตรวจ") excluding held patients
+  // Collect all HNs and screening_ids currently active in ANY room (calling, consulting, or walkin)
+  const activeRoomHns = new Set();
+  const activeRoomScreeningIds = new Set();
+
+  Object.values(global.smartQueueState?.rooms || {}).forEach((r) => {
+    if (r && r.status && r.status !== "empty" && r.status !== "break") {
+      if (r.current_hn) activeRoomHns.add(String(r.current_hn).trim());
+      if (r.current_screening_id) activeRoomScreeningIds.add(Number(r.current_screening_id));
+    }
+  });
+
+  // Also collect active consultations from DB (status_id = 3 "ตรวจ")
+  todayScreenings.forEach((s) => {
+    if (Number(s.status_id) === 3) {
+      if (s.hn) activeRoomHns.add(String(s.hn).trim());
+      if (s.screening_id) activeRoomScreeningIds.add(Number(s.screening_id));
+    }
+  });
+
+  // 2) Derive waiting list (status_id = 2 "รอตรวจ") excluding held patients AND patients currently active/calling in any room
   const heldScreeningIds = new Set((global.smartQueueState?.heldList || []).map((h) => Number(h.screening_id)));
 
-  // Cleanup priorityBypassedList: if someone in priority list has already started consult or completed, remove them
+  // Cleanup priorityBypassedList: if someone in priority list has already started consult, is in a room, or completed, remove them
   if (global.smartQueueState?.priorityBypassedList) {
     global.smartQueueState.priorityBypassedList = global.smartQueueState.priorityBypassedList.filter((p) => {
       const scr = todayScreenings.find((s) => String(s.hn) === String(p.hn));
-      return scr && Number(scr.status_id) === 2;
+      const inRoom = activeRoomHns.has(String(p.hn).trim());
+      return scr && Number(scr.status_id) === 2 && !inRoom;
     });
   }
 
-  const priorityHns = new Set((global.smartQueueState?.priorityBypassedList || []).map((p) => String(p.hn)));
+  const priorityHns = new Set((global.smartQueueState?.priorityBypassedList || []).map((p) => String(p.hn).trim()));
 
   const baseWaitingList = todayScreenings
-    .filter((s) => Number(s.status_id) === 2 && !heldScreeningIds.has(Number(s.screening_id)))
+    .filter((s) => {
+      const isWaiting = Number(s.status_id) === 2;
+      const isHeld = heldScreeningIds.has(Number(s.screening_id));
+      const inRoom = activeRoomHns.has(String(s.hn).trim()) || activeRoomScreeningIds.has(Number(s.screening_id));
+      return isWaiting && !isHeld && !inRoom;
+    })
     .map((s) => ({
       screening_id: s.screening_id,
       hn: String(s.hn),
@@ -226,11 +251,36 @@ export async function POST(req) {
 
     if (action === "call") {
       const roomNo = Number(body.room_no);
-      const hn = String(body.hn || "").trim();
-      const patientName = String(body.patient_name || "").trim();
-      const screeningId = Number(body.screening_id) || null;
+      let hn = String(body.hn || "").trim();
+      let patientName = String(body.patient_name || "").trim();
+      let screeningId = Number(body.screening_id) || null;
       const roomName = String(body.room_name || `${roomNo}`);
       const staffName = String(body.staff_name || "");
+
+      // Check if this HN is currently being called in ANOTHER room
+      const isHnCalledInOtherRoom = Object.entries(global.smartQueueState.rooms).some(
+        ([rNo, rData]) => Number(rNo) !== roomNo && rData && String(rData.current_hn).trim() === hn && rData.status === "calling"
+      );
+
+      // If already called by another room or HN is empty, pick the next available waiting patient
+      if (isHnCalledInOtherRoom || !hn) {
+        const currentData = await getQueueData();
+        const otherCallingHns = new Set(
+          Object.entries(global.smartQueueState.rooms)
+            .filter(([rNo, rData]) => Number(rNo) !== roomNo && rData && rData.current_hn && rData.status !== "empty" && rData.status !== "break")
+            .map(([, rData]) => String(rData.current_hn).trim())
+        );
+
+        const availableNext = (currentData.waitingList || []).find(
+          (w) => String(w.hn).trim() !== hn && !otherCallingHns.has(String(w.hn).trim())
+        );
+
+        if (availableNext) {
+          hn = String(availableNext.hn);
+          patientName = availableNext.patient_name || "";
+          screeningId = availableNext.screening_id || null;
+        }
+      }
 
       global.smartQueueState.rooms[roomNo] = {
         room_no: roomNo,

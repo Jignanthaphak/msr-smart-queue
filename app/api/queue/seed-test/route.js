@@ -115,6 +115,14 @@ export async function GET(request) {
       }
     }
 
+    // Reset in-memory queue state so rooms start clean
+    if (global.smartQueueState) {
+      global.smartQueueState.rooms = {};
+      global.smartQueueState.heldList = [];
+      global.smartQueueState.lastCall = null;
+      global.smartQueueState.priorityBypassedList = [];
+    }
+
     // Trigger real-time SSE push to all screens
     if (typeof global.notifyQueueClients === "function") {
       await global.notifyQueueClients();
