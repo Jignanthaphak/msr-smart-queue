@@ -237,7 +237,8 @@ export default function QueueControlMini() {
     }
   };
 
-  // 7) Auto-call Countdown Timer (ถ้าระบบว่างเกิน xx วินาที และมีคนรอในคิว ระบบจะเรียกคิวให้อัตโนมัติ)
+  // 7) Auto-call Countdown Timer (เฉพาะกรณี "ขอเวลาสักครู่" หลังคีย์ส่งตรวจหน้าคอนเซาท์เสร็จ)
+  // หากครบเวลาแล้วเจ้าหน้าที่ยังไม่กด ให้ระบบอัตโนมัติเรียกคิวเลย ไม่เปลี่ยนเป็นว่างก่อน!
   useEffect(() => {
     const delaySec = Number(queueState?.config?.delay_seconds) || 30;
 
@@ -246,34 +247,38 @@ export default function QueueControlMini() {
       const newCountdownMap = {};
 
       (queueState.rooms || []).forEach((room) => {
-        const isEmpty = room.status === "empty";
-        const isBreak = room.status === "break";
-        const hasStaff = Boolean(room.staff_id || (room.staff_name && room.staff_name !== "-"));
+        const isPendingConsult = room.status === "pending_consult" || room.status === "pending_consult_expired";
 
-        // นับเวลาถอยหลังเฉพาะเมื่อห้องว่าง ไม่ได้พักเบรก มีเจ้าหน้าที่ประจำ และมีคนรอในคิว
-        if (isEmpty && !isBreak && hasStaff && waitingCount > 0) {
-          if (!emptyTimestampsRef.current[room.room_no]) {
-            emptyTimestampsRef.current[room.room_no] = Date.now();
+        // นับเวลาถอยหลังเฉพาะกรณีหลังส่งตรวจหน้าคอนเซาท์เสร็จ (สถานะ ขอเวลาสักครู่) และมีคนรอในคิว
+        if (isPendingConsult && waitingCount > 0) {
+          let remaining = room.cooldown_remaining;
+          if (remaining === undefined || remaining === null) {
+            if (!emptyTimestampsRef.current[room.room_no]) {
+              emptyTimestampsRef.current[room.room_no] = Date.now();
+            }
+            const elapsed = Math.floor((Date.now() - emptyTimestampsRef.current[room.room_no]) / 1000);
+            remaining = Math.max(0, delaySec - elapsed);
+          } else {
+            if (!emptyTimestampsRef.current[room.room_no]) {
+              emptyTimestampsRef.current[room.room_no] = Date.now() - (delaySec - remaining) * 1000;
+            }
+            const elapsed = Math.floor((Date.now() - emptyTimestampsRef.current[room.room_no]) / 1000);
+            remaining = Math.max(0, delaySec - elapsed);
           }
-
-          const elapsedSec = Math.floor((Date.now() - emptyTimestampsRef.current[room.room_no]) / 1000);
-          const remaining = Math.max(0, delaySec - elapsedSec);
 
           newCountdownMap[room.room_no] = remaining;
 
-          // เมื่อหมดเวลา (0 วินาที): ระบบเรียกคิวต่อไปอัตโนมัติ!
-          if (remaining === 0 && !isAutoCallingRef.current && !loadingRef.current) {
-            // เรียกเฉพาะถ้ายูสเซอร์นี้มีสิทธิ์ในห้องนี้ (เช่น เจ้าของห้อง หรือ แอดมิน)
+          // เมื่อหมดเวลา (0 วินาที): ระบบทำการเรียกคิวต่อไปให้อัตโนมัติทันที!
+          if (remaining <= 0 && !isAutoCallingRef.current && !loadingRef.current) {
             if (canControlRoom(room)) {
               isAutoCallingRef.current = true;
-              emptyTimestampsRef.current[room.room_no] = Date.now(); // reset to avoid continuous triggering
+              emptyTimestampsRef.current[room.room_no] = Date.now();
               handleCallNext(room).finally(() => {
                 isAutoCallingRef.current = false;
               });
             }
           }
         } else {
-          // ล้าง timestamp ถ้าห้องไม่เข้าเงื่อนไข
           delete emptyTimestampsRef.current[room.room_no];
         }
       });
@@ -394,6 +399,8 @@ export default function QueueControlMini() {
                 const isConsulting = room.status === "consulting";
                 const isWalkinBeforeCall = room.status === "walkin_before_call" || room.is_walkin_before_call;
                 const isBreak = room.status === "break";
+                const isPendingConsult = room.status === "pending_consult" || room.status === "pending_consult_expired";
+                const isPleaseWait = isBreak || isPendingConsult;
                 const isEmpty = room.status === "empty";
                 const canControl = canControlRoom(room);
                 const countdownSec = countdownMap[room.room_no];
@@ -406,7 +413,7 @@ export default function QueueControlMini() {
                         ? "bg-emerald-50/70"
                         : isConsulting || isWalkinBeforeCall
                         ? "bg-slate-50/70"
-                        : isBreak
+                        : isPleaseWait
                         ? "bg-amber-50/40"
                         : "hover:bg-gray-50/50"
                     }
@@ -459,9 +466,13 @@ export default function QueueControlMini() {
                         <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300 whitespace-nowrap">
                           ให้คำปรึกษา
                         </span>
-                      ) : (
-                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap">
+                      ) : isPleaseWait ? (
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
                           ขอเวลาสักครู่
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-300 whitespace-nowrap">
+                          ว่าง
                         </span>
                       )}
                     </td>
@@ -496,8 +507,34 @@ export default function QueueControlMini() {
                             พัก
                           </button>
                         </div>
+                      ) : isPendingConsult ? (
+                        /* กรณี ขอเวลาสักครู่ หลังส่งตรวจหน้าคอนเซาท์เสร็จ -> ขึ้นปุ่ม เรียกคิว สีน้ำเงิน พร้อมเวลานับถอยหลัง auto-call */
+                        <button
+                          onClick={() => handleCallNext(room)}
+                          disabled={!canControl || loading || !queueState.waitingList?.length}
+                          className={`btn btn-xs ${
+                            canControl && queueState.waitingList?.length
+                              ? "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+                              : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                          } px-2 py-0.5 text-[11px] font-semibold rounded-md border-0 h-6 min-h-0 whitespace-nowrap inline-flex items-center justify-center gap-1`}
+                          title={
+                            !canControl
+                              ? "เฉพาะเจ้าของห้องหรือผู้ดูแลระบบเท่านั้น"
+                              : !queueState.waitingList?.length
+                              ? "ยังไม่มีคิวรอรับบริการ"
+                              : "กดเรียกคิวถัดไปได้ทันที หรือรอระบบเรียกให้อัตโนมัติ"
+                          }
+                        >
+                          <Play className="w-3 h-3 fill-current shrink-0" />
+                          <span>เรียกคิว</span>
+                          {countdownSec !== undefined && countdownSec > 0 && (
+                            <span className="text-[9px] bg-blue-900/40 text-blue-100 px-1 py-0.2 rounded font-mono ml-0.5">
+                              {countdownSec}s
+                            </span>
+                          )}
+                        </button>
                       ) : isEmpty && !isBreak ? (
-                        /* แบบที่ 1: ยังไม่กดเรียกคิว (ห้องว่างพร้อมรับคิว) -> ขึ้นปุ่ม เรียกคิว สีน้ำเงิน */
+                        /* แบบที่ 1: สถานะ ว่าง (เริ่มต้น หรือ หลังกดเข้างาน) -> ขึ้นปุ่ม เรียกคิว สีน้ำเงิน คงสถานะว่างไว้ */
                         <button
                           onClick={() => handleCallNext(room)}
                           disabled={!canControl || loading || !queueState.waitingList?.length}
@@ -516,13 +553,8 @@ export default function QueueControlMini() {
                         >
                           <Play className="w-3 h-3 fill-current shrink-0" />
                           <span>เรียกคิว</span>
-                          {countdownSec !== undefined && countdownSec > 0 && (
-                            <span className="text-[9px] bg-blue-900/40 text-blue-100 px-1 py-0.2 rounded font-mono ml-0.5">
-                              {countdownSec}s
-                            </span>
-                          )}
                         </button>
-                      ) : null /* กรณีให้คำปรึกษา หรือ พักเบรก (ขอเวลาสักครู่): คอลัมน์นี้จะว่างไป */}
+                      ) : null /* กรณีให้คำปรึกษา หรือ ขอพัก (break): คอลัมน์นี้จะว่างไป */}
                     </td>
                   </tr>
                 );

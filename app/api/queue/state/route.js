@@ -8,13 +8,64 @@ import { date } from "@/lib/utils/dateFormat";
 // Global in-memory queue state store
 if (!global.smartQueueState) {
   global.smartQueueState = {
-    // Room states: map of room_no -> { room_no, room_name, staff_id, staff_name, current_hn, patient_name, current_screening_id, status: 'empty'|'calling'|'consulting'|'break', called_at: null }
+    // Room states: map of room_no -> { room_no, room_name, staff_id, staff_name, current_hn, patient_name, current_screening_id, status: 'empty'|'calling'|'consulting'|'break'|'pending_consult', called_at: null }
     rooms: {},
     heldList: [], // Array of { screening_id, hn, patient_name, held_at, reason }
     lastCall: null, // { room_no, room_name, staff_name, hn, patient_name, timestamp }
     priorityBypassedList: [], // Queue of patients bumped/bypassed by walk-in VIPs
+    pendingPostConsultRooms: {}, // Rooms in post-consult cooldown (ขอเวลาสักครู่): map of room_no -> { finished_at, staff_id }
   };
 }
+if (!global.smartQueueState.pendingPostConsultRooms) {
+  global.smartQueueState.pendingPostConsultRooms = {};
+}
+
+// Helper: Mark a room as entering post-consult cooldown (ขอเวลาสักครู่)
+global.markRoomPostConsult = function (screeningId, hn, userId) {
+  if (!global.smartQueueState) {
+    global.smartQueueState = { rooms: {}, heldList: [], lastCall: null, pendingPostConsultRooms: {} };
+  }
+  if (!global.smartQueueState.pendingPostConsultRooms) {
+    global.smartQueueState.pendingPostConsultRooms = {};
+  }
+
+  let foundRoomNo = null;
+
+  // 1) Find room by screening_id or hn in global.smartQueueState.rooms
+  if (global.smartQueueState.rooms) {
+    for (const [rNo, r] of Object.entries(global.smartQueueState.rooms)) {
+      if (
+        r &&
+        ((screeningId && Number(r.current_screening_id) === Number(screeningId)) ||
+         (hn && String(r.current_hn).trim() === String(hn).trim()))
+      ) {
+        foundRoomNo = Number(rNo);
+        delete global.smartQueueState.rooms[rNo];
+        break;
+      }
+    }
+  }
+
+  // 2) If not found by active patient, find room by assigned staff user_id
+  if (!foundRoomNo && userId && global.smartQueueConfig?.room_assignments) {
+    const assign = global.smartQueueConfig.room_assignments.find(
+      (a) => Number(a.user_id) === Number(userId)
+    );
+    if (assign && assign.room_no) {
+      foundRoomNo = Number(assign.room_no);
+    }
+  }
+
+  // 3) Mark room in post-consult cooldown ("ขอเวลาสักครู่")
+  if (foundRoomNo) {
+    global.smartQueueState.pendingPostConsultRooms[foundRoomNo] = {
+      finished_at: Date.now(),
+      staff_id: userId ? Number(userId) : null,
+      screening_id: screeningId ? Number(screeningId) : null,
+      hn: hn ? String(hn) : null,
+    };
+  }
+};
 
 // Clients connected via SSE for real-time queue sync
 if (!global.queueClients) {
@@ -171,6 +222,7 @@ export async function getQueueData() {
     let currentHn = "";
     let currentPatientName = "";
     let currentScreeningId = null;
+    let cooldownRemaining = 0;
 
     // Check if the patient currently in memoryRoom has finished consultation or closed case
     let memScreening = null;
@@ -185,14 +237,19 @@ export async function getQueueData() {
     const isMemScreeningFinished = memScreening && (Number(memScreening.status_id) === 4 || Number(memScreening.status_id) === 5);
 
     if (isMemScreeningFinished) {
-      // The consultation for this patient is complete! Automatically clear the room!
+      // The consultation for this patient is complete! Mark post-consult cooldown and clear room!
+      if (global.markRoomPostConsult) {
+        global.markRoomPostConsult(memScreening.screening_id, memScreening.hn, staffId);
+      }
       delete global.smartQueueState.rooms[i];
     }
 
     if (isStaffOnBreak) {
-      currentStatus = "break";
+      currentStatus = "break"; // "ขอเวลาสักครู่" (พักสายตา)
+      delete global.smartQueueState.pendingPostConsultRooms?.[i];
     } else if (activeConsult) {
       currentStatus = "consulting"; // In room, consultation ongoing (Solid Gray)
+      delete global.smartQueueState.pendingPostConsultRooms?.[i];
       currentHn = String(activeConsult.hn);
       currentPatientName = `${activeConsult.prefix_title || ""} ${activeConsult.firstname || ""} ${activeConsult.lastname || ""}`.trim();
       currentScreeningId = activeConsult.screening_id;
@@ -235,14 +292,36 @@ export async function getQueueData() {
     } else if (memScreening && Number(memScreening.status_id) === 3) {
       // Patient is currently in consultation
       currentStatus = "consulting";
+      delete global.smartQueueState.pendingPostConsultRooms?.[i];
       currentHn = String(memScreening.hn);
       currentPatientName = `${memScreening.prefix_title || ""} ${memScreening.firstname || ""} ${memScreening.lastname || ""}`.trim();
       currentScreeningId = memScreening.screening_id;
     } else if (!isMemScreeningFinished && memoryRoom.status === "calling" && memoryRoom.current_hn) {
       currentStatus = "calling"; // Currently calling (Blinking Green)
+      delete global.smartQueueState.pendingPostConsultRooms?.[i];
       currentHn = memoryRoom.current_hn;
       currentPatientName = memoryRoom.patient_name || "";
       currentScreeningId = memoryRoom.current_screening_id || null;
+    } else {
+      // ตรวจสอบกรณี "ขอเวลาสักครู่" หลังการส่งตรวจหน้าคอนเซาท์เสร็จ ภายในเวลา delay_seconds
+      const delaySec = Number(config.delay_seconds) || 30;
+      const postConsult = global.smartQueueState?.pendingPostConsultRooms?.[i];
+
+      if (postConsult && postConsult.finished_at) {
+        const elapsedSec = (Date.now() - postConsult.finished_at) / 1000;
+        if (elapsedSec < delaySec) {
+          currentStatus = "pending_consult"; // "ขอเวลาสักครู่"
+          cooldownRemaining = Math.max(0, Math.ceil(delaySec - elapsedSec));
+        } else {
+          // Cooldown หมดเวลาแล้ว -> ให้ระบบอัตโนมัติเรียกคิวเลย! ไม่เปลี่ยนเป็นว่างก่อน
+          delete global.smartQueueState.pendingPostConsultRooms[i];
+          currentStatus = "pending_consult_expired";
+          cooldownRemaining = 0;
+        }
+      } else {
+        // สถานะเริ่มต้น หรือ กดเข้างาน -> ให้ขึ้นว่า "ว่าง" คงไว้
+        currentStatus = "empty";
+      }
     }
 
     roomResults.push({
@@ -256,6 +335,7 @@ export async function getQueueData() {
       current_screening_id: currentScreeningId,
       patient_name: currentPatientName,
       called_at: memoryRoom.called_at || null,
+      cooldown_remaining: cooldownRemaining,
     });
   }
 
@@ -319,6 +399,9 @@ export async function POST(req) {
           screeningId = availableNext.screening_id || null;
         }
       }
+
+      // Clear post-consult cooldown for this room immediately
+      delete global.smartQueueState.pendingPostConsultRooms?.[roomNo];
 
       global.smartQueueState.rooms[roomNo] = {
         room_no: roomNo,

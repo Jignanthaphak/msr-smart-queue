@@ -64,8 +64,10 @@ export async function PATCH(req, {params}) {
 
     const result = await consultSendScreenings({ create_by, session_id, source_file,  ...data }, where);
         
-    // Clear the room in Smart Queue state so it immediately transitions to empty on TV and monitor
-    if (global.smartQueueState?.rooms) {
+    // Mark the room in Smart Queue state as entering post-consult cooldown ("ขอเวลาสักครู่")
+    if (global.markRoomPostConsult) {
+      global.markRoomPostConsult(data.screening_id, result?.hn, create_by);
+    } else if (global.smartQueueState?.rooms) {
       Object.keys(global.smartQueueState.rooms).forEach((rNo) => {
         const r = global.smartQueueState.rooms[rNo];
         if (

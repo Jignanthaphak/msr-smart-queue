@@ -100,6 +100,15 @@ export async function POST(req) {
     // 1) Save in memory for zero-latency retrieval
     global.staffBreakStore.set(Number(userId), newStatus);
 
+    // Clear post-consult cooldown for this staff's room when entering work
+    if (newStatus === 0 && global.smartQueueState?.pendingPostConsultRooms) {
+      Object.keys(global.smartQueueState.pendingPostConsultRooms).forEach((rNo) => {
+        if (Number(global.smartQueueState.pendingPostConsultRooms[rNo]?.staff_id) === Number(userId)) {
+          delete global.smartQueueState.pendingPostConsultRooms[rNo];
+        }
+      });
+    }
+
     // 2) Persist to database
     try {
       await dbKnex("tbl_account")
@@ -112,6 +121,9 @@ export async function POST(req) {
     // 3) Broadcast to all monitor screens connected via SSE
     try {
       await notifyClients();
+      if (global.notifyQueueClients) {
+        await global.notifyQueueClients();
+      }
     } catch (sseErr) {
       console.error("notifyClients error on break toggle:", sseErr);
     }

@@ -248,6 +248,8 @@ export default function QueueDisplayPage() {
                   const isConsulting = room.status === "consulting";
                   const isWalkinBeforeCall = room.status === "walkin_before_call" || room.is_walkin_before_call;
                   const isBreak = room.status === "break";
+                  const isPendingConsult = room.status === "pending_consult" || room.status === "pending_consult_expired";
+                  const isPleaseWait = isBreak || isPendingConsult;
                   const isLatestBottomRow = idx === sortedRooms.length - 1;
 
                   return (
@@ -258,8 +260,8 @@ export default function QueueDisplayPage() {
                           ? "bg-emerald-50/80 border-b-2 border-emerald-500 shadow-xs"
                           : isConsulting || isWalkinBeforeCall
                           ? "bg-gray-50/30"
-                          : isBreak
-                          ? "bg-gray-50/70"
+                          : isPleaseWait
+                          ? "bg-amber-50/40"
                           : "hover:bg-gray-50/30"
                       }`}
                     >
@@ -292,7 +294,7 @@ export default function QueueDisplayPage() {
                         </div>
                       </td>
 
-                      {/* Column 3: สถานะ (ป้ายขนาดเท่ากันทุกสถานะ ไม่ตัดคำ แถวเดียวเสมอ: มีแค่ 3 สถานะเท่านั้น) */}
+                      {/* Column 3: สถานะ (ป้ายขนาดเท่ากันทุกสถานะ ไม่ตัดคำ แถวเดียวเสมอ) */}
                       <td className="py-6 px-6 text-center whitespace-nowrap">
                         {isCalling ? (
                           <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-bold bg-emerald-600 text-white animate-bounce shadow-md shadow-emerald-500/30 whitespace-nowrap">
@@ -304,9 +306,14 @@ export default function QueueDisplayPage() {
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                             ให้คำปรึกษา
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-semibold bg-gray-200 text-gray-700 border border-gray-300 whitespace-nowrap">
+                        ) : isPleaseWait ? (
+                          <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs whitespace-nowrap">
                             ⏳ ขอเวลาสักครู่
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-bold bg-slate-100 text-slate-600 border border-slate-300 shadow-2xs whitespace-nowrap">
+                            <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                            ว่าง
                           </span>
                         )}
                       </td>
