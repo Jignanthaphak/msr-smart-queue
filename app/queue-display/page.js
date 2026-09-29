@@ -104,23 +104,23 @@ export default function QueueDisplayPage() {
       <header className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 py-3.5 px-5 md:py-4 md:px-6 mb-4 md:mb-5 flex items-center justify-between gap-4 md:gap-6 shadow-sm">
         <div className="flex items-center gap-3.5 md:gap-4.5 min-w-0">
           <img
-            src={`${(clientConfig?.base_path !== undefined && clientConfig?.base_path !== null) ? clientConfig.base_path : "/msr"}/images/Logo-mhc4.png`}
-            alt="โลโก้ศูนย์สุขภาพจิตที่ 4"
+            src={`${(clientConfig?.base_path !== undefined && clientConfig?.base_path !== null) ? clientConfig.base_path : "/msr"}/images/logo-MOPH.png`}
+            alt="ตรากระทรวงสาธารณสุข"
             className="h-16 md:h-[68px] lg:h-[72px] w-auto max-h-[72px] shrink-0 object-contain drop-shadow-xs"
             onError={(e) => {
               const bp = (clientConfig?.base_path !== undefined && clientConfig?.base_path !== null) ? clientConfig.base_path : "/msr";
               if (!e.target.dataset.tried1) {
                 e.target.dataset.tried1 = "true";
-                e.target.src = `${bp}/image/Logo-mhc4.png`;
+                e.target.src = `${bp}/image/logo-MOPH.png`;
               } else if (!e.target.dataset.tried2) {
                 e.target.dataset.tried2 = "true";
-                e.target.src = `${bp}/Logo-mhc4.png`;
+                e.target.src = `${bp}/logo-MOPH.png`;
               } else if (!e.target.dataset.tried3) {
                 e.target.dataset.tried3 = "true";
-                e.target.src = "/images/Logo-mhc4.png";
+                e.target.src = "/images/logo-MOPH.png";
               } else if (!e.target.dataset.tried4) {
                 e.target.dataset.tried4 = "true";
-                e.target.src = "/Logo-mhc4.png";
+                e.target.src = "/logo-MOPH.png";
               } else if (!e.target.dataset.tried5) {
                 e.target.dataset.tried5 = "true";
                 e.target.src = `${bp}/images/Logo_msr_top2.png`;
