@@ -203,6 +203,7 @@ export default function QueueDisplayPage() {
                 return sortedRooms.map((room, idx) => {
                   const isCalling = room.status === "calling";
                   const isConsulting = room.status === "consulting";
+                  const isWalkinBeforeCall = room.status === "walkin_before_call" || room.is_walkin_before_call;
                   const isBreak = room.status === "break";
                   const isLatestBottomRow = idx === sortedRooms.length - 1;
 
@@ -212,7 +213,7 @@ export default function QueueDisplayPage() {
                       className={`transition-colors ${
                         isCalling
                           ? "bg-emerald-50/80 border-b-2 border-emerald-500 shadow-xs"
-                          : isConsulting
+                          : isConsulting || isWalkinBeforeCall
                           ? "bg-gray-50/30"
                           : isBreak
                           ? "bg-gray-50/70"
@@ -225,7 +226,7 @@ export default function QueueDisplayPage() {
                           <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-black tracking-wider text-emerald-950 whitespace-nowrap">
                             HN {room.current_hn}
                           </div>
-                        ) : isConsulting && room.current_hn ? (
+                        ) : (isConsulting || isWalkinBeforeCall) && room.current_hn ? (
                           <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-bold tracking-wider text-gray-600 whitespace-nowrap">
                             HN {room.current_hn}
                           </div>
@@ -249,6 +250,10 @@ export default function QueueDisplayPage() {
                           <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-bold bg-emerald-600 text-white animate-bounce shadow-md shadow-emerald-500/30 whitespace-nowrap">
                             <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
                             กำลังเรียก..
+                          </span>
+                        ) : isWalkinBeforeCall ? (
+                          <span className="inline-flex items-center justify-center gap-1.5 w-48 md:w-52 h-12 rounded-full text-xs md:text-sm font-semibold bg-gray-100 text-gray-500 border border-gray-200 shadow-2xs whitespace-nowrap">
+                            เข้าห้องตรวจก่อนการเรียกคิว
                           </span>
                         ) : isConsulting ? (
                           <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs whitespace-nowrap">
@@ -289,11 +294,7 @@ export default function QueueDisplayPage() {
                 {queueData.waitingList.slice(0, 6).map((item, idx) => (
                   <div
                     key={item.screening_id || idx}
-                    className={`py-2.5 px-2 rounded-xl font-mono font-black text-center text-lg xl:text-xl border shadow-xs transition-all whitespace-nowrap ${
-                      item.is_priority
-                        ? "bg-emerald-50 text-emerald-900 border-emerald-400 ring-2 ring-emerald-300/50"
-                        : "bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200"
-                    }`}
+                    className="py-2.5 px-2 rounded-xl font-mono font-black text-center text-lg xl:text-xl border shadow-xs transition-all whitespace-nowrap bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200"
                   >
                     HN {item.hn}
                   </div>

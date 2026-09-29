@@ -140,15 +140,15 @@ export async function getQueueData() {
       currentPatientName = `${activeConsult.prefix_title || ""} ${activeConsult.firstname || ""} ${activeConsult.lastname || ""}`.trim();
       currentScreeningId = activeConsult.screening_id;
 
-      // ⚡ VIP / Walk-in Insertion Detection:
-      // If this room was actively calling a DIFFERENT patient (memoryRoom.current_hn),
-      // and staff in this room started consultation for activeConsult (different HN),
-      // that means a VIP or walk-in walked straight in without waiting for the queue!
+      // Check if patient entered room before being called (Walk-in before call)
+      let isWalkinBeforeCall = false;
+
       if (
         memoryRoom.status === "calling" &&
         memoryRoom.current_hn &&
         String(memoryRoom.current_hn) !== String(activeConsult.hn)
       ) {
+        isWalkinBeforeCall = true;
         const displacedHn = String(memoryRoom.current_hn);
         const displacedName = memoryRoom.patient_name || "";
         const displacedScreeningId = memoryRoom.current_screening_id;
@@ -157,7 +157,7 @@ export async function getQueueData() {
           global.smartQueueState.priorityBypassedList = [];
         }
 
-        // Return the displaced patient to the TOP of the priority queue
+        // Return the displaced patient to the TOP of the waiting queue
         if (!global.smartQueueState.priorityBypassedList.some((p) => String(p.hn) === displacedHn)) {
           global.smartQueueState.priorityBypassedList.unshift({
             hn: displacedHn,
@@ -168,9 +168,13 @@ export async function getQueueData() {
           });
         }
 
-        // Clear the superseded calling state for this room
+        // Clear the superseded calling state for this room so it does NOT stay as "กำลังเรียก"
         delete global.smartQueueState.rooms[i];
+      } else if (!memoryRoom.called_at || String(memoryRoom.current_hn) !== String(activeConsult.hn)) {
+        isWalkinBeforeCall = true;
       }
+
+      currentStatus = isWalkinBeforeCall ? "walkin_before_call" : "consulting";
     } else if (memoryRoom.status === "calling" && memoryRoom.current_hn) {
       currentStatus = "calling"; // Currently calling (Blinking Green)
       currentHn = memoryRoom.current_hn;
@@ -184,6 +188,7 @@ export async function getQueueData() {
       staff_id: staffId,
       staff_name: assign.nickname || "-",
       status: currentStatus,
+      is_walkin_before_call: currentStatus === "walkin_before_call",
       current_hn: currentHn,
       current_screening_id: currentScreeningId,
       patient_name: currentPatientName,

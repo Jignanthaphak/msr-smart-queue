@@ -221,6 +221,7 @@ export default function QueueControlMini() {
               queueState.rooms.map((room) => {
                 const isCalling = room.status === "calling";
                 const isConsulting = room.status === "consulting";
+                const isWalkinBeforeCall = room.status === "walkin_before_call" || room.is_walkin_before_call;
                 const isBreak = room.status === "break";
                 const isEmpty = room.status === "empty";
 
@@ -230,7 +231,7 @@ export default function QueueControlMini() {
                     className={
                       isCalling
                         ? "bg-emerald-50/70"
-                        : isConsulting
+                        : isConsulting || isWalkinBeforeCall
                         ? "bg-slate-50"
                         : isBreak
                         ? "bg-amber-50/50"
@@ -255,7 +256,7 @@ export default function QueueControlMini() {
                         <span className="inline-block px-2.5 py-1 rounded-md bg-emerald-100 border border-emerald-400 text-emerald-700 font-mono font-black text-sm animate-pulse">
                           HN {room.current_hn}
                         </span>
-                      ) : isConsulting && room.current_hn ? (
+                      ) : (isConsulting || isWalkinBeforeCall) && room.current_hn ? (
                         <span className="inline-block px-2.5 py-1 rounded-md bg-gray-200 text-gray-600 font-mono font-bold text-sm">
                           HN {room.current_hn}
                         </span>
@@ -271,6 +272,10 @@ export default function QueueControlMini() {
                       {isCalling ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white animate-bounce">
                           🟢 กำลังเรียก
+                        </span>
+                      ) : isWalkinBeforeCall ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-500 border border-gray-200">
+                          เข้าห้องตรวจก่อนการเรียกคิว
                         </span>
                       ) : isConsulting ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
