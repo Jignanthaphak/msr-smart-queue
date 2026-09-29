@@ -376,7 +376,7 @@ export default function QueueControlMini() {
                             <button
                               onClick={() => handleRecall(room)}
                               className="btn btn-xs btn-outline btn-success flex items-center gap-1"
-                              title="เรียกซ้ำ"
+                              title="เรียกซ้ำหมายเลขเดิม"
                             >
                               <Volume2 className="w-3 h-3" />
                               เรียกซ้ำ
@@ -389,7 +389,28 @@ export default function QueueControlMini() {
                               <Pause className="w-3 h-3" />
                               พักคิว
                             </button>
+                            <button
+                              onClick={() => handleCallNext(room)}
+                              disabled={loading || !queueState.waitingList?.length}
+                              className="btn btn-xs btn-primary text-white flex items-center gap-1"
+                              title="เรียกคิวถัดไป"
+                            >
+                              <Play className="w-3 h-3" />
+                              คิวถัดไป
+                            </button>
                           </>
+                        )}
+
+                        {(isConsulting || isWalkinBeforeCall) && (
+                          <button
+                            onClick={() => handleCallNext(room)}
+                            disabled={loading || !queueState.waitingList?.length}
+                            className="btn btn-xs btn-primary text-white flex items-center gap-1"
+                            title="เรียกคิวถัดไป"
+                          >
+                            <Play className="w-3 h-3" />
+                            คิวถัดไป
+                          </button>
                         )}
 
                         {isEmpty && (

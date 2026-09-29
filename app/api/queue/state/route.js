@@ -157,6 +157,23 @@ export async function getQueueData() {
     let currentPatientName = "";
     let currentScreeningId = null;
 
+    // Check if the patient currently in memoryRoom has finished consultation or closed case
+    let memScreening = null;
+    if (memoryRoom.current_screening_id || memoryRoom.current_hn) {
+      memScreening = todayScreenings.find(
+        (s) =>
+          (memoryRoom.current_screening_id && Number(s.screening_id) === Number(memoryRoom.current_screening_id)) ||
+          (memoryRoom.current_hn && String(s.hn).trim() === String(memoryRoom.current_hn).trim())
+      );
+    }
+
+    const isMemScreeningFinished = memScreening && (Number(memScreening.status_id) === 4 || Number(memScreening.status_id) === 5);
+
+    if (isMemScreeningFinished) {
+      // The consultation for this patient is complete! Automatically clear the room!
+      delete global.smartQueueState.rooms[i];
+    }
+
     if (isStaffOnBreak) {
       currentStatus = "break";
     } else if (activeConsult) {
@@ -200,7 +217,13 @@ export async function getQueueData() {
       }
 
       currentStatus = isWalkinBeforeCall ? "walkin_before_call" : "consulting";
-    } else if (memoryRoom.status === "calling" && memoryRoom.current_hn) {
+    } else if (memScreening && Number(memScreening.status_id) === 3) {
+      // Patient is currently in consultation
+      currentStatus = "consulting";
+      currentHn = String(memScreening.hn);
+      currentPatientName = `${memScreening.prefix_title || ""} ${memScreening.firstname || ""} ${memScreening.lastname || ""}`.trim();
+      currentScreeningId = memScreening.screening_id;
+    } else if (!isMemScreeningFinished && memoryRoom.status === "calling" && memoryRoom.current_hn) {
       currentStatus = "calling"; // Currently calling (Blinking Green)
       currentHn = memoryRoom.current_hn;
       currentPatientName = memoryRoom.patient_name || "";
