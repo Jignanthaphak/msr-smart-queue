@@ -92,6 +92,9 @@ export async function notifyClients() {
 
     clients.forEach((client) => client.write(msg));
 
+    if (global.notifyQueueClients) {
+      await global.notifyQueueClients();
+    }
   } catch (err) {
 
     console.error("SSE notifyClients error:", err);

@@ -68,7 +68,8 @@ export async function getQueueData() {
         "name_prefixes.title as prefix_title",
         "screening_status.status_name"
       )
-      .orderBy("screening.update_date", "asc");
+      .orderBy("screening.update_date", "asc")
+      .orderBy("screening.screening_id", "asc");
   } catch (e) {
     console.error("Fetch todayScreenings error:", e.message);
   }
