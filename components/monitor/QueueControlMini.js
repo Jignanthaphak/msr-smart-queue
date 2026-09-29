@@ -100,6 +100,7 @@ export default function QueueControlMini() {
         hn: room.current_hn,
         roomName: room.room_name,
         staffName: room.staff_name,
+        basePath: clientConfig?.base_path || "/msr",
       });
     } catch (err) {
       console.error("handleRecall error:", err);

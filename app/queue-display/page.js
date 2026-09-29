@@ -60,6 +60,7 @@ export default function QueueDisplayPage() {
                 hn: payload.lastCall.hn,
                 roomName: payload.lastCall.room_name,
                 staffName: payload.lastCall.staff_name,
+                basePath: clientConfig?.base_path || "/msr",
               });
             }
           }
