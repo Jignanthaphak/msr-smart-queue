@@ -2,17 +2,47 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import clientConfig from "@/config/Client";
+import useAuthStore from "@/stores/useAuthStore";
 import { getQueueState, callQueue, recallQueue, holdQueue, resumeQueue } from "@/services/queue";
 import { announceQueue } from "@/lib/utils/queueAudio";
-import { Volume2, Pause, Play, RotateCcw, AlertTriangle, Monitor, ExternalLink, RefreshCw } from "lucide-react";
+import { Play, Pause, RotateCcw, Monitor, ExternalLink } from "lucide-react";
 import Swal from "sweetalert2";
 import Link from "next/link";
 
 export default function QueueControlMini() {
   const [queueState, setQueueState] = useState({ rooms: [], waitingList: [], heldList: [], config: {} });
   const [loading, setLoading] = useState(false);
-  const [countdown, setCountdown] = useState(null); // { roomNo, secondsRemaining }
-  const delayTimerRef = useRef(null);
+  const [countdownMap, setCountdownMap] = useState({}); // { [roomNo]: secondsRemaining }
+  const emptyTimestampsRef = useRef({});
+  const isAutoCallingRef = useRef(false);
+  const loadingRef = useRef(false);
+
+  const currentUser = useAuthStore((state) => state.user);
+  const isAdmin = Boolean(currentUser?.isAdminPanel || Number(currentUser?.isRole) === 1);
+
+  // ตรวจสอบสิทธิ์: แอดมินกดได้ทุกห้อง ทุกคน | ยูสเซอร์เจ้าของห้องกดได้แค่ห้องของตัวเอง
+  const canControlRoom = (room) => {
+    if (isAdmin) return true; // แอดมินกดได้ทุกห้อง ทุกคน
+    if (!currentUser) return false;
+
+    // ยูสเซอร์เจ้าของห้อง: ตรวจสอบทั้ง user_id, nickname และ username
+    const currentUserId = currentUser.userId ? Number(currentUser.userId) : null;
+    const roomStaffId = room.staff_id ? Number(room.staff_id) : null;
+    if (currentUserId && roomStaffId && currentUserId === roomStaffId) {
+      return true;
+    }
+
+    const currentNick = (currentUser.nickName || "").trim().toLowerCase();
+    const currentUsername = (currentUser.userName || "").trim().toLowerCase();
+    const roomStaff = (room.staff_name || "").trim().toLowerCase();
+
+    if (roomStaff && roomStaff !== "-") {
+      if (currentNick && roomStaff === currentNick) return true;
+      if (currentUsername && roomStaff === currentUsername) return true;
+    }
+
+    return false;
+  };
 
   // 1) Real-time SSE listener
   useEffect(() => {
@@ -55,6 +85,10 @@ export default function QueueControlMini() {
     }
   };
 
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
   // 3) Call Next Queue to a Room (ข้ามคิวที่ถูกเรียกหรืออยู่ในห้องอื่นอยู่แล้วอัตโนมัติ)
   const handleCallNext = async (room) => {
     // รวบรวม HN ที่กำลังถูกเรียก หรือกำลังตรวจในห้องอื่นอยู่แล้ว
@@ -82,6 +116,7 @@ export default function QueueControlMini() {
 
     const nextPatient = availablePatients[0];
     setLoading(true);
+    loadingRef.current = true;
     try {
       const res = await callQueue({
         room_no: room.room_no,
@@ -93,11 +128,13 @@ export default function QueueControlMini() {
       });
       if (res && res.success) {
         setQueueState(res);
+        delete emptyTimestampsRef.current[room.room_no];
       }
     } catch (err) {
       console.error("handleCallNext error:", err);
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   };
 
@@ -200,7 +237,54 @@ export default function QueueControlMini() {
     }
   };
 
-  // 7) Seed & Clear 20 Test Queues (สำหรับทดสอบระบบ)
+  // 7) Auto-call Countdown Timer (ถ้าระบบว่างเกิน xx วินาที และมีคนรอในคิว ระบบจะเรียกคิวให้อัตโนมัติ)
+  useEffect(() => {
+    const delaySec = Number(queueState?.config?.delay_seconds) || 30;
+
+    const timer = setInterval(() => {
+      const waitingCount = (queueState.waitingList || []).length;
+      const newCountdownMap = {};
+
+      (queueState.rooms || []).forEach((room) => {
+        const isEmpty = room.status === "empty";
+        const isBreak = room.status === "break";
+        const hasStaff = Boolean(room.staff_id || (room.staff_name && room.staff_name !== "-"));
+
+        // นับเวลาถอยหลังเฉพาะเมื่อห้องว่าง ไม่ได้พักเบรก มีเจ้าหน้าที่ประจำ และมีคนรอในคิว
+        if (isEmpty && !isBreak && hasStaff && waitingCount > 0) {
+          if (!emptyTimestampsRef.current[room.room_no]) {
+            emptyTimestampsRef.current[room.room_no] = Date.now();
+          }
+
+          const elapsedSec = Math.floor((Date.now() - emptyTimestampsRef.current[room.room_no]) / 1000);
+          const remaining = Math.max(0, delaySec - elapsedSec);
+
+          newCountdownMap[room.room_no] = remaining;
+
+          // เมื่อหมดเวลา (0 วินาที): ระบบเรียกคิวต่อไปอัตโนมัติ!
+          if (remaining === 0 && !isAutoCallingRef.current && !loadingRef.current) {
+            // เรียกเฉพาะถ้ายูสเซอร์นี้มีสิทธิ์ในห้องนี้ (เช่น เจ้าของห้อง หรือ แอดมิน)
+            if (canControlRoom(room)) {
+              isAutoCallingRef.current = true;
+              emptyTimestampsRef.current[room.room_no] = Date.now(); // reset to avoid continuous triggering
+              handleCallNext(room).finally(() => {
+                isAutoCallingRef.current = false;
+              });
+            }
+          }
+        } else {
+          // ล้าง timestamp ถ้าห้องไม่เข้าเงื่อนไข
+          delete emptyTimestampsRef.current[room.room_no];
+        }
+      });
+
+      setCountdownMap(newCountdownMap);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [queueState, isAdmin, currentUser]);
+
+  // 8) Seed & Clear 20 Test Queues (สำหรับทดสอบระบบ)
   const handleSeedTest = async () => {
     try {
       setLoading(true);
@@ -287,14 +371,20 @@ export default function QueueControlMini() {
       </div>
 
       {/* Mini Hospital Grid (Live Preview of what patients see) */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-xs mb-4">
-        <table className="table w-full text-xs">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-xs mb-4 overflow-hidden">
+        <table className="w-full text-xs table-fixed">
+          <colgroup>
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "27%" }} />
+            <col style={{ width: "29%" }} />
+            <col style={{ width: "28%" }} />
+          </colgroup>
           <thead>
-            <tr className="bg-gray-100 text-gray-700">
-              <th className="py-2.5 px-3">ห้องตรวจ</th>
-              <th className="py-2.5 px-3 text-center">หมายเลข HN</th>
-              <th className="py-2.5 px-3 text-center">สถานะจอทีวี</th>
-              <th className="py-2.5 px-3 text-right">ปุ่มควบคุม</th>
+            <tr className="bg-gray-100 text-gray-700 border-b border-gray-200">
+              <th className="py-2.5 px-1 text-center font-bold">ห้อง</th>
+              <th className="py-2.5 px-1 text-center font-bold">หมายเลข HN</th>
+              <th className="py-2.5 px-1 text-center font-bold">สถานะจอทีวี</th>
+              <th className="py-2.5 px-1 text-center font-bold">จัดการ</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -305,6 +395,8 @@ export default function QueueControlMini() {
                 const isWalkinBeforeCall = room.status === "walkin_before_call" || room.is_walkin_before_call;
                 const isBreak = room.status === "break";
                 const isEmpty = room.status === "empty";
+                const canControl = canControlRoom(room);
+                const countdownSec = countdownMap[room.room_no];
 
                 return (
                   <tr
@@ -313,119 +405,124 @@ export default function QueueControlMini() {
                       isCalling
                         ? "bg-emerald-50/70"
                         : isConsulting || isWalkinBeforeCall
-                        ? "bg-slate-50"
+                        ? "bg-slate-50/70"
                         : isBreak
-                        ? "bg-amber-50/50"
-                        : ""
+                        ? "bg-amber-50/40"
+                        : "hover:bg-gray-50/50"
                     }
                   >
-                    {/* Room info */}
-                    <td className="py-2.5 px-3 font-semibold text-gray-800 whitespace-nowrap">
-                      <div className="text-sm font-bold text-gray-900">
+                    {/* Column 1: ห้อง (กะทัดรัด ตัวหนา ไม่เปลืองพื้นที่) */}
+                    <td className="py-2.5 px-1 text-center whitespace-nowrap">
+                      <div className="text-sm font-black text-gray-900 leading-tight">
                         {String(room.room_name || room.room_no || "")
                           .replace(/^ห้องคอนเซาท์\s*(?:ที่)?/i, "")
                           .trim() || room.room_no}
                       </div>
-                      <div className="text-[11px] text-gray-400 font-normal">
+                      <div
+                        className="text-[10px] text-gray-400 font-normal leading-tight mt-0.5 truncate max-w-[50px] mx-auto"
+                        title={room.staff_name || "-"}
+                      >
                         {room.staff_name || "-"}
                       </div>
                     </td>
 
-                    {/* HN Number: Blinking Green on Call, Solid Gray on Consult */}
-                    <td className="py-2.5 px-3 text-center">
+                    {/* Column 2: หมายเลข HN */}
+                    <td className="py-2.5 px-1 text-center whitespace-nowrap">
                       {isCalling && room.current_hn ? (
-                        <span className="inline-block px-2.5 py-1 rounded-md bg-emerald-100 border border-emerald-400 text-emerald-700 font-mono font-black text-sm animate-pulse">
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-100 border border-emerald-400 text-emerald-800 font-mono font-black text-xs whitespace-nowrap animate-pulse">
                           HN {room.current_hn}
                         </span>
                       ) : (isConsulting || isWalkinBeforeCall) && room.current_hn ? (
-                        <div className="flex flex-col items-center">
-                          <span className="inline-block px-2.5 py-1 rounded-md bg-gray-200 text-gray-600 font-mono font-bold text-sm">
+                        <div className="flex flex-col items-center justify-center leading-tight">
+                          <span className="inline-block px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-mono font-bold text-xs whitespace-nowrap">
                             HN {room.current_hn}
                           </span>
                           {isWalkinBeforeCall && (
-                            <span className="text-[10px] text-gray-400 font-normal mt-0.5 whitespace-nowrap">
-                              เข้าห้องก่อนการเรียกคิว
+                            <span className="text-[9px] text-gray-400 font-normal mt-0.5 whitespace-nowrap">
+                              เข้าก่อนเรียก
                             </span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-gray-400 font-mono">-</span>
+                        <span className="text-gray-400 font-mono text-xs">-</span>
                       )}
                     </td>
 
-                    {/* Screen Status: มีแค่ 3 สถานะเท่านั้น */}
-                    <td className="py-2.5 px-3 text-center">
+                    {/* Column 3: สถานะจอทีวี (ไม่ตัดคำเด็ดขาด) */}
+                    <td className="py-2.5 px-1 text-center whitespace-nowrap">
                       {isCalling ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white animate-bounce">
-                          🟢 กำลังเรียก
+                        <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white whitespace-nowrap shadow-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping shrink-0" />
+                          กำลังเรียก
                         </span>
-                      ) : (isConsulting || isWalkinBeforeCall) ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      ) : isConsulting || isWalkinBeforeCall ? (
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300 whitespace-nowrap">
                           ให้คำปรึกษา
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-200 text-gray-700">
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap">
                           ขอเวลาสักครู่
                         </span>
                       )}
                     </td>
 
-                    {/* Actions */}
-                    <td className="py-2.5 px-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {isCalling && (
-                          <>
-                            <button
-                              onClick={() => handleRecall(room)}
-                              className="btn btn-xs btn-outline btn-success flex items-center gap-1"
-                              title="เรียกซ้ำหมายเลขเดิม"
-                            >
-                              <Volume2 className="w-3 h-3" />
-                              เรียกซ้ำ
-                            </button>
-                            <button
-                              onClick={() => handleHold(room)}
-                              className="btn btn-xs btn-outline btn-warning flex items-center gap-1"
-                              title="พักคิวนี้ไว้ชั่วคราว (Hold)"
-                            >
-                              <Pause className="w-3 h-3" />
-                              พักคิว
-                            </button>
-                            <button
-                              onClick={() => handleCallNext(room)}
-                              disabled={loading || !queueState.waitingList?.length}
-                              className="btn btn-xs btn-primary text-white flex items-center gap-1"
-                              title="เรียกคิวถัดไป"
-                            >
-                              <Play className="w-3 h-3" />
-                              คิวถัดไป
-                            </button>
-                          </>
-                        )}
-
-                        {(isConsulting || isWalkinBeforeCall) && (
+                    {/* Column 4: จัดการ (มี 2 แบบ: [เรียกคิว] สีน้ำเงินตอนว่าง หรือ [ซ้ำ] [พัก] ตอนเรียก และว่างไปตอนคอนเซาท์) */}
+                    <td className="py-2.5 px-1 text-center whitespace-nowrap">
+                      {/* แบบที่ 2: กดเรียกคิวแล้ว -> มี 2 ปุ่มขึ้นมาแทนคือ ซ้ำ กับ พัก สั้นๆ พอ */}
+                      {isCalling ? (
+                        <div className="inline-flex items-center justify-center gap-1 whitespace-nowrap">
                           <button
-                            onClick={() => handleCallNext(room)}
-                            disabled={loading || !queueState.waitingList?.length}
-                            className="btn btn-xs btn-primary text-white flex items-center gap-1"
-                            title="เรียกคิวถัดไป"
+                            onClick={() => handleRecall(room)}
+                            disabled={!canControl || loading}
+                            className={`btn btn-xs ${
+                              canControl
+                                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                                : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                            } px-2 py-0.5 text-[11px] font-semibold rounded-md border-0 h-6 min-h-0`}
+                            title={canControl ? "เรียกซ้ำหมายเลขเดิม" : "เฉพาะเจ้าของห้องหรือผู้ดูแลระบบ"}
                           >
-                            <Play className="w-3 h-3" />
-                            คิวถัดไป
+                            ซ้ำ
                           </button>
-                        )}
-
-                        {isEmpty && (
                           <button
-                            onClick={() => handleCallNext(room)}
-                            disabled={loading || !queueState.waitingList?.length}
-                            className="btn btn-xs btn-primary text-white flex items-center gap-1"
+                            onClick={() => handleHold(room)}
+                            disabled={!canControl || loading}
+                            className={`btn btn-xs ${
+                              canControl
+                                ? "bg-amber-500 hover:bg-amber-600 text-white shadow-xs"
+                                : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                            } px-2 py-0.5 text-[11px] font-semibold rounded-md border-0 h-6 min-h-0`}
+                            title={canControl ? "พักคิวนี้ไว้ชั่วคราว (Hold)" : "เฉพาะเจ้าของห้องหรือผู้ดูแลระบบ"}
                           >
-                            <Play className="w-3 h-3" />
-                            เรียกคิว
+                            พัก
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      ) : isEmpty && !isBreak ? (
+                        /* แบบที่ 1: ยังไม่กดเรียกคิว (ห้องว่างพร้อมรับคิว) -> ขึ้นปุ่ม เรียกคิว สีน้ำเงิน */
+                        <button
+                          onClick={() => handleCallNext(room)}
+                          disabled={!canControl || loading || !queueState.waitingList?.length}
+                          className={`btn btn-xs ${
+                            canControl && queueState.waitingList?.length
+                              ? "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+                              : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                          } px-2 py-0.5 text-[11px] font-semibold rounded-md border-0 h-6 min-h-0 whitespace-nowrap inline-flex items-center justify-center gap-1`}
+                          title={
+                            !canControl
+                              ? "เฉพาะเจ้าของห้องหรือผู้ดูแลระบบเท่านั้น"
+                              : !queueState.waitingList?.length
+                              ? "ยังไม่มีคิวรอรับบริการ"
+                              : "กดเรียกคิวถัดไป"
+                          }
+                        >
+                          <Play className="w-3 h-3 fill-current shrink-0" />
+                          <span>เรียกคิว</span>
+                          {countdownSec !== undefined && countdownSec > 0 && (
+                            <span className="text-[9px] bg-blue-900/40 text-blue-100 px-1 py-0.2 rounded font-mono ml-0.5">
+                              {countdownSec}s
+                            </span>
+                          )}
+                        </button>
+                      ) : null /* กรณีให้คำปรึกษา หรือ พักเบรก (ขอเวลาสักครู่): คอลัมน์นี้จะว่างไป */}
                     </td>
                   </tr>
                 );
