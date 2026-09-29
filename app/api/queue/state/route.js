@@ -38,13 +38,12 @@ global.notifyQueueClients = async function () {
 export async function getQueueData() {
   const today = date();
   const config = global.smartQueueConfig || {
-    active_rooms: 4,
+    active_rooms: 3,
     delay_seconds: 30,
     room_assignments: [
       { room_no: 1, room_name: "1", user_id: null, nickname: "" },
       { room_no: 2, room_name: "2", user_id: null, nickname: "" },
       { room_no: 3, room_name: "3", user_id: null, nickname: "" },
-      { room_no: 4, room_name: "4", user_id: null, nickname: "" },
     ],
   };
 
@@ -104,7 +103,7 @@ export async function getQueueData() {
   ];
 
   // 3) Construct rooms state based on config & active consultations
-  const numRooms = config.active_rooms || 4;
+  const numRooms = config.active_rooms || 3;
   const assignments = config.room_assignments || [];
   const roomResults = [];
 

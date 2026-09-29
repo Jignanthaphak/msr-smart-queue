@@ -11,7 +11,7 @@ export default function QueueSettingPage() {
   const [saving, setSaving] = useState(false);
   const [staffList, setStaffList] = useState([]);
   const [config, setConfig] = useState({
-    active_rooms: 4,
+    active_rooms: 3,
     delay_seconds: 30,
     sound_enabled: 1,
     room_assignments: [],
@@ -28,7 +28,7 @@ export default function QueueSettingPage() {
       if (res && res.success) {
         setStaffList(res.staffList || []);
         const loadedConfig = res.config || {};
-        const activeRooms = loadedConfig.active_rooms || 4;
+        const activeRooms = loadedConfig.active_rooms || 3;
 
         // Ensure room_assignments array matches activeRooms count
         let assignments = loadedConfig.room_assignments || [];
@@ -37,7 +37,7 @@ export default function QueueSettingPage() {
         const normalizedAssignments = [];
         for (let i = 1; i <= activeRooms; i++) {
           const existing = assignments.find((a) => Number(a.room_no) === i);
-          const rawName = existing?.room_name ? String(existing.room_name).replace(/^ห้องคอนเซาท์\s*/i, "").trim() : `${i}`;
+          const rawName = existing?.room_name ? String(existing.room_name).replace(/^ห้องคอนเซาท์\s*(?:ที่)?/i, "").trim() : `${i}`;
           normalizedAssignments.push({
             room_no: i,
             room_name: rawName || `${i}`,

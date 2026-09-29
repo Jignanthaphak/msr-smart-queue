@@ -192,7 +192,7 @@ export default function QueueControlMini() {
       <div className="flex items-center justify-between mb-3">
         <h4 className="card-title text-base font-bold flex items-center gap-2">
           <Monitor className="w-5 h-5 text-primary" />
-          <span>แผงควบคุมและจำลองคิว (Smart Queue Monitor)</span>
+          <span>แผงควบคุมระบบเรียกคิว (Smart Queue Monitor)</span>
         </h4>
         <Link
           href="/queue-display"
@@ -242,11 +242,11 @@ export default function QueueControlMini() {
                     <td className="py-2.5 px-3 font-semibold text-gray-800 whitespace-nowrap">
                       <div className="text-sm font-bold text-gray-900">
                         {String(room.room_name || room.room_no || "")
-                          .replace(/^ห้องคอนเซาท์\s*/i, "")
+                          .replace(/^ห้องคอนเซาท์\s*(?:ที่)?/i, "")
                           .trim() || room.room_no}
                       </div>
-                      <div className="text-[11px] text-gray-500 font-normal">
-                        ผู้ให้คำปรึกษา: {room.staff_name || "-"}
+                      <div className="text-[11px] text-gray-400 font-normal">
+                        {room.staff_name || "-"}
                       </div>
                     </td>
 
@@ -348,9 +348,6 @@ export default function QueueControlMini() {
           <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
             <Pause className="w-3.5 h-3.5 text-amber-600" />
             คิวที่พักไว้ชั่วคราว (Held Queues): {queueState.heldList?.length || 0} ราย
-          </span>
-          <span className="text-[11px] text-gray-500">
-            (เช่น ตรวจ Bio แล้วติดประชุม สามารถดึงกลับมารับบริการได้)
           </span>
         </div>
 

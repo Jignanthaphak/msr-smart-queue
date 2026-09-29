@@ -8,14 +8,13 @@ import dbKnex from "@/lib/Knex/dbKnex";
 // In-memory fallback/cache for real-time responsiveness
 if (!global.smartQueueConfig) {
   global.smartQueueConfig = {
-    active_rooms: 4,
+    active_rooms: 3,
     delay_seconds: 30,
     sound_enabled: 1,
     room_assignments: [
       { room_no: 1, room_name: "1", user_id: null, nickname: "" },
       { room_no: 2, room_name: "2", user_id: null, nickname: "" },
       { room_no: 3, room_name: "3", user_id: null, nickname: "" },
-      { room_no: 4, room_name: "4", user_id: null, nickname: "" },
     ],
   };
 }
@@ -28,7 +27,7 @@ async function ensureQueueConfigTable() {
     if (!hasTable) {
       await dbKnex.schema.createTable("tbl_queue_config", (table) => {
         table.increments("id").primary();
-        table.integer("active_rooms").notNullable().defaultTo(4);
+        table.integer("active_rooms").notNullable().defaultTo(3);
         table.integer("delay_seconds").notNullable().defaultTo(30);
         table.tinyint("sound_enabled").notNullable().defaultTo(1);
         table.text("room_assignments").nullable();
