@@ -227,13 +227,18 @@ export default function QueueDisplayPage() {
                             HN {room.current_hn}
                           </div>
                         ) : (isConsulting || isWalkinBeforeCall) && room.current_hn ? (
-                          <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-bold tracking-wider text-gray-600 whitespace-nowrap">
-                            HN {room.current_hn}
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="inline-flex items-center justify-center font-mono text-4xl md:text-6xl font-bold tracking-wider text-gray-600 whitespace-nowrap">
+                              HN {room.current_hn}
+                            </div>
+                            {isWalkinBeforeCall && (
+                              <div className="text-xs md:text-sm text-gray-400 font-medium tracking-normal mt-1 whitespace-nowrap">
+                                เข้าห้องก่อนการเรียกคิว
+                              </div>
+                            )}
                           </div>
-                        ) : isBreak ? (
-                          <span className="font-mono text-4xl md:text-5xl font-bold text-gray-400">-</span>
                         ) : (
-                          <span className="font-mono text-4xl text-gray-300 font-bold">-</span>
+                          <span className="font-mono text-4xl md:text-5xl font-bold text-gray-400">-</span>
                         )}
                       </td>
 
@@ -244,29 +249,21 @@ export default function QueueDisplayPage() {
                         </div>
                       </td>
 
-                      {/* Column 3: สถานะ (ป้ายขนาดเท่ากันทุกสถานะ ไม่ตัดคำ แถวเดียวเสมอ) */}
+                      {/* Column 3: สถานะ (ป้ายขนาดเท่ากันทุกสถานะ ไม่ตัดคำ แถวเดียวเสมอ: มีแค่ 3 สถานะเท่านั้น) */}
                       <td className="py-6 px-6 text-center whitespace-nowrap">
                         {isCalling ? (
                           <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-bold bg-emerald-600 text-white animate-bounce shadow-md shadow-emerald-500/30 whitespace-nowrap">
                             <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
                             กำลังเรียก..
                           </span>
-                        ) : isWalkinBeforeCall ? (
-                          <span className="inline-flex items-center justify-center gap-1.5 w-48 md:w-52 h-12 rounded-full text-xs md:text-sm font-semibold bg-gray-100 text-gray-500 border border-gray-200 shadow-2xs whitespace-nowrap">
-                            เข้าห้องตรวจก่อนการเรียกคิว
-                          </span>
-                        ) : isConsulting ? (
+                        ) : (isConsulting || isWalkinBeforeCall) ? (
                           <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs whitespace-nowrap">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                             ให้คำปรึกษา
                           </span>
-                        ) : isBreak ? (
+                        ) : (
                           <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-semibold bg-gray-200 text-gray-700 border border-gray-300 whitespace-nowrap">
                             ⏳ ขอเวลาสักครู่
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center justify-center gap-2 w-48 md:w-52 h-12 rounded-full text-base md:text-lg font-semibold bg-gray-100 text-gray-400 border border-gray-200 whitespace-nowrap">
-                            ว่าง
                           </span>
                         )}
                       </td>

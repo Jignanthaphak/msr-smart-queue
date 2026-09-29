@@ -257,37 +257,34 @@ export default function QueueControlMini() {
                           HN {room.current_hn}
                         </span>
                       ) : (isConsulting || isWalkinBeforeCall) && room.current_hn ? (
-                        <span className="inline-block px-2.5 py-1 rounded-md bg-gray-200 text-gray-600 font-mono font-bold text-sm">
-                          HN {room.current_hn}
-                        </span>
-                      ) : isBreak ? (
-                        <span className="text-amber-600 font-semibold text-xs">☕ ขอพัก</span>
+                        <div className="flex flex-col items-center">
+                          <span className="inline-block px-2.5 py-1 rounded-md bg-gray-200 text-gray-600 font-mono font-bold text-sm">
+                            HN {room.current_hn}
+                          </span>
+                          {isWalkinBeforeCall && (
+                            <span className="text-[10px] text-gray-400 font-normal mt-0.5 whitespace-nowrap">
+                              เข้าห้องก่อนการเรียกคิว
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-gray-400 font-mono">-</span>
                       )}
                     </td>
 
-                    {/* Screen Status */}
+                    {/* Screen Status: มีแค่ 3 สถานะเท่านั้น */}
                     <td className="py-2.5 px-3 text-center">
                       {isCalling ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white animate-bounce">
                           🟢 กำลังเรียก
                         </span>
-                      ) : isWalkinBeforeCall ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-500 border border-gray-200">
-                          เข้าห้องตรวจก่อนการเรียกคิว
-                        </span>
-                      ) : isConsulting ? (
+                      ) : (isConsulting || isWalkinBeforeCall) ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                           ให้คำปรึกษา
                         </span>
-                      ) : isBreak ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-400 text-white">
-                          พัก
-                        </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-200 text-gray-600">
-                          ว่าง
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-200 text-gray-700">
+                          ขอเวลาสักครู่
                         </span>
                       )}
                     </td>
