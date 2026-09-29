@@ -186,23 +186,90 @@ export default function QueueControlMini() {
     }
   };
 
+  // 7) Seed & Clear 20 Test Queues (สำหรับทดสอบระบบ)
+  const handleSeedTest = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${clientConfig.backend_url}/queue/seed-test`).then((r) => r.json());
+      if (res && res.success) {
+        Swal.fire({
+          icon: "success",
+          title: "เพิ่มคิวทดสอบ 20 คนเรียบร้อยแล้วค่ะ",
+          text: "ผู้รับบริการ HN 9001 - 9020 เข้าสู่คิวรอตรวจของวันนี้แล้วค่ะ สามารถกดเรียกคิวได้เลย",
+          confirmButtonText: "ตกลง",
+          confirmButtonColor: "#10b981",
+        });
+        fetchState();
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "เกิดข้อผิดพลาด",
+          text: res?.error || "ไม่สามารถเพิ่มข้อมูลทดสอบได้",
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearTest = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${clientConfig.backend_url}/queue/seed-test?action=clear`).then((r) => r.json());
+      if (res && res.success) {
+        Swal.fire({
+          icon: "success",
+          title: "ล้างคิวทดสอบเรียบร้อยแล้วค่ะ",
+          text: "ล้างข้อมูล HN 9001 - 9020 ออกจากระบบเรียบร้อยแล้วค่ะ",
+          confirmButtonText: "ตกลง",
+          confirmButtonColor: "#10b981",
+        });
+        fetchState();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="card-content border-t pt-4 mt-2">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h4 className="card-title text-base font-bold flex items-center gap-2">
           <Monitor className="w-5 h-5 text-primary" />
           <span>แผงควบคุมระบบเรียกคิว (Smart Queue Monitor)</span>
         </h4>
-        <Link
-          href="/queue-display"
-          target="_blank"
-          className="text-xs text-primary hover:underline flex items-center gap-1 font-semibold"
-          title="เปิดหน้าจอแสดงผลคิวสำหรับต่อจอทีวี"
-        >
-          <ExternalLink className="w-3.5 h-3.5" />
-          เปิดจอใหญ่ (TV Display)
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSeedTest}
+            disabled={loading}
+            className="btn btn-xs btn-outline btn-success flex items-center gap-1 font-semibold"
+            title="สร้างข้อมูลจำลองผู้รับบริการ 20 คน (HN 9001 - 9020) สถานะรอตรวจ เพื่อทดสอบระบบเรียกคิว"
+          >
+            🧪 เพิ่มคิวทดสอบ 20 คน
+          </button>
+          <button
+            onClick={handleClearTest}
+            disabled={loading}
+            className="btn btn-xs btn-outline btn-error flex items-center gap-1 font-semibold"
+            title="ล้างข้อมูลคิวทดสอบ (HN 9001 - 9020) ออกจากระบบ"
+          >
+            🗑️ ล้างคิวทดสอบ
+          </button>
+          <Link
+            href="/queue-display"
+            target="_blank"
+            className="text-xs text-primary hover:underline flex items-center gap-1 font-semibold ml-1"
+            title="เปิดหน้าจอแสดงผลคิวสำหรับต่อจอทีวี"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            เปิดจอใหญ่ (TV Display)
+          </Link>
+        </div>
       </div>
 
       {/* Mini Hospital Grid (Live Preview of what patients see) */}
