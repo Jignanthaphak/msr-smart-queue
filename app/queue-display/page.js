@@ -100,13 +100,13 @@ export default function QueueDisplayPage() {
       onClick={ensureAudioEnabled}
       className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans select-none p-4 md:p-6 lg:p-8"
     >
-      {/* Top Header Bar: Single Horizontal Row, Never Wraps, Clock Right-Aligned */}
-      <header className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 p-4 md:p-6 mb-6 flex items-center justify-between gap-4 md:gap-6 shadow-md">
+      {/* Top Header Bar: Single Horizontal Row, Never Wraps, Compact & Balanced for TV */}
+      <header className="w-full bg-white rounded-2xl md:rounded-3xl border border-gray-200 py-3 px-4 md:py-3.5 md:px-6 mb-4 md:mb-5 flex items-center justify-between gap-4 md:gap-6 shadow-sm">
         <div className="flex items-center gap-3 md:gap-4 min-w-0">
           <img
             src={`${(clientConfig?.base_path !== undefined && clientConfig?.base_path !== null) ? clientConfig.base_path : "/msr"}/images/Logo-mhc4.png`}
             alt="โลโก้ศูนย์สุขภาพจิตที่ 4"
-            className="h-14 md:h-16 lg:h-20 w-auto max-h-20 shrink-0 object-contain drop-shadow-xs"
+            className="h-10 md:h-11 lg:h-12 w-auto max-h-12 shrink-0 object-contain drop-shadow-xs"
             onError={(e) => {
               const bp = (clientConfig?.base_path !== undefined && clientConfig?.base_path !== null) ? clientConfig.base_path : "/msr";
               if (!e.target.dataset.tried1) {
@@ -120,37 +120,40 @@ export default function QueueDisplayPage() {
                 e.target.src = "/images/Logo-mhc4.png";
               } else if (!e.target.dataset.tried4) {
                 e.target.dataset.tried4 = "true";
+                e.target.src = "/Logo-mhc4.png";
+              } else if (!e.target.dataset.tried5) {
+                e.target.dataset.tried5 = "true";
                 e.target.src = `${bp}/images/Logo_msr_top2.png`;
               }
             }}
           />
           <div className="min-w-0">
-            <h1 className="text-lg md:text-xl lg:text-2xl xl:text-3xl font-black tracking-tight text-gray-900 leading-tight whitespace-nowrap">
+            <h1 className="text-base md:text-lg lg:text-xl xl:text-2xl font-black tracking-tight text-gray-900 leading-tight whitespace-nowrap">
               ศูนย์สุขภาพจิตที่ 4 กรมสุขภาพจิต กระทรวงสาธารณสุข
             </h1>
-            <div className="text-sm md:text-base lg:text-lg text-emerald-600 font-extrabold tracking-wide mt-1 flex items-center gap-1.5 whitespace-nowrap">
-              <span className="text-amber-400 text-base md:text-lg">✨</span>
+            <div className="text-xs md:text-sm lg:text-base text-emerald-600 font-extrabold tracking-wide mt-0.5 flex items-center gap-1.5 whitespace-nowrap">
+              <span className="text-amber-400 text-sm md:text-base">✨</span>
               <span>ระบบคิวบริการให้การปรึกษาด้านสุขภาพจิต</span>
             </div>
           </div>
         </div>
 
-        {/* Clock & Controls (Right-aligned, never wraps) */}
+        {/* Clock & Controls (Right-aligned, never wraps, compact for TV) */}
         <div className="flex items-center gap-3 shrink-0 ml-auto">
           <div className="text-right whitespace-nowrap">
-            <div className="text-2xl md:text-3xl lg:text-4xl font-black font-mono tracking-wider text-emerald-600 flex items-center gap-2 justify-end">
-              <Clock className="w-5 h-5 md:w-6 md:h-6 text-gray-400 shrink-0" />
+            <div className="text-base md:text-lg lg:text-xl font-black font-mono tracking-normal text-emerald-600 flex items-center gap-1.5 justify-end">
+              <Clock className="w-4 h-4 text-emerald-600/80 shrink-0" />
               <span>{currentTime || "--:--:--"}</span>
             </div>
-            <div className="text-xs md:text-sm text-gray-500 font-semibold mt-0.5">{currentDate}</div>
+            <div className="text-[10px] md:text-xs text-gray-400 font-medium mt-0.5">{currentDate}</div>
           </div>
 
           <button
             onClick={handleToggleFullscreen}
-            className="p-2 md:p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 border border-gray-200 transition-colors shadow-2xs shrink-0"
+            className="p-1.5 md:p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 border border-gray-200 transition-colors shadow-2xs shrink-0"
             title="เต็มจอ (Fullscreen)"
           >
-            <Maximize className="w-4 h-4 md:w-5 md:h-5" />
+            <Maximize className="w-4 h-4" />
           </button>
         </div>
       </header>
