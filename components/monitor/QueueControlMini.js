@@ -181,47 +181,44 @@ export default function QueueControlMini() {
     }
   };
 
-  // 5) Hold Queue (พักคิว) with SweetAlert2 confirmation!
-  const handleHold = async (room) => {
+  // 5) Skip Queue from calling room (ข้ามคิว → ไปต่อท้ายคิวสุดท้าย)
+  const handleSkipFromCall = async (room) => {
     if (!room.current_hn) return;
 
     const result = await Swal.fire({
-      title: "ยืนยันการพักคิว (Hold)?",
-      html: `ต้องการพักคิวผู้รับบริการ <b>HN ${room.current_hn}</b> (${room.patient_name || ""}) ไว้ชั่วคราวหรือไม่?<br/><small class="text-gray-500">คิวนี้จะถูกย้ายไปที่รายการพักคิว และห้องตรวจจะพร้อมเรียกคิวถัดไป</small>`,
+      title: "⏭️ ข้ามคิวนี้?",
+      html: `ต้องการข้ามผู้รับบริการ <b>HN ${room.current_hn}</b> (${room.patient_name || ""}) ใช่หรือไม่?<br/><small class="text-gray-500">คิวนี้จะถูกย้ายไปต่อแถว<b>ท้ายสุด</b>ของคิวรอตรวจ และห้องตรวจจะว่างพร้อมเรียกคิวถัดไปทันที</small>`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#f59e0b",
+      confirmButtonColor: "#ef4444",
       cancelButtonColor: "#6b7280",
-      confirmButtonText: "ใช่, พักคิวนี้",
+      confirmButtonText: "ใช่, ข้ามคิวนี้",
       cancelButtonText: "ยกเลิก",
     });
 
     if (result.isConfirmed) {
       setLoading(true);
       try {
-        const res = await holdQueue({
-          screening_id: room.current_screening_id,
-          hn: room.current_hn,
-          patient_name: room.patient_name,
-          reason: "ติดประชุม / พักคิวชั่วคราว",
-        });
+        const res = await skipQueue({ room_no: room.room_no });
         if (res && res.success) {
           setQueueState(res);
           Swal.fire({
             icon: "success",
-            title: "พักคิวเรียบร้อย",
-            text: `คิว HN ${room.current_hn} ถูกย้ายไปที่รายการคิวที่พักไว้แล้วค่ะ`,
+            title: "ข้ามคิวเรียบร้อย",
+            text: `คิว HN ${room.current_hn} ถูกย้ายไปต่อท้ายคิวแล้วค่ะ`,
             timer: 2000,
             showConfirmButton: false,
           });
         }
       } catch (err) {
-        console.error("handleHold error:", err);
+        console.error("handleSkipFromCall error:", err);
       } finally {
         setLoading(false);
       }
     }
   };
+
+
 
   // 6) Resume Queue (ดึงกลับเข้าคิว) with SweetAlert2 confirmation!
   const handleResume = async (heldItem) => {
@@ -389,90 +386,138 @@ export default function QueueControlMini() {
     return () => clearInterval(timer);
   }, [queueState, isAdmin, currentUser]);
 
-  // 9) Advance Hold Queue (พักคิวล่วงหน้า)
+  // 9) Advance Hold Queue (พักคิวล่วงหน้า) - แอดมินกรอก HN เอง ระบบตรวจสอบ
   const handleAdvanceHold = async () => {
-    const waiting = queueState.waitingList || [];
-    if (waiting.length === 0) {
-      Swal.fire({
-        icon: "info",
-        title: "ไม่มีคิวรอรับบริการ",
-        text: "ขณะนี้ยังไม่มีผู้รับบริการในคิวรอตรวจที่สามารถพักได้ค่ะ",
-        confirmButtonText: "ตกลง",
-        confirmButtonColor: "#10b981",
-      });
-      return;
-    }
-
-    const optionsHtml = waiting
-      .map(
-        (p) =>
-          `<option value="${p.screening_id}">HN ${p.hn} - ${p.patient_name || "-"}</option>`
-      )
-      .join("");
-
-    const { value: formValues } = await Swal.fire({
-      title: "➕ พักคิวล่วงหน้า (Advance Hold)",
+    // Step 1: กรอก HN
+    const { value: inputHn, isConfirmed: step1Ok } = await Swal.fire({
+      title: "🔍 พักคิวล่วงหน้า",
       html: `
         <div class="text-left text-xs mb-3 text-gray-600">
-          เลือกผู้รับบริการที่ต้องการพักคิวล่วงหน้า (เช่น ผู้รับบริการแจ้งติดประชุม หรือขอพักคิวก่อน):
-        </div>
-        <div class="mb-3 text-left">
-          <label class="block text-xs font-bold text-gray-700 mb-1">เลือกผู้รับบริการในคิว:</label>
-          <select id="swal-select-patient" class="w-full p-2 border border-gray-300 rounded text-sm bg-white font-mono">
-            ${optionsHtml}
-          </select>
+          กรอกหมายเลข HN ของผู้รับบริการที่ต้องการพักคิวล่วงหน้าค่ะ<br/>
+          <span class="text-amber-600 font-semibold">(เช่น ผู้รับบริการแจ้งว่าจะติดประชุมก่อน ต้องการพักคิวล่วงหน้า)</span>
         </div>
         <div class="text-left">
-          <label class="block text-xs font-bold text-gray-700 mb-1">เหตุผลการพักคิว:</label>
-          <input id="swal-hold-reason" class="w-full p-2 border border-gray-300 rounded text-sm bg-white" placeholder="ระบุเหตุผล เช่น ติดประชุม / ขอพักคิวชั่วคราว" value="ติดประชุม / ขอพักคิวชั่วคราว" />
+          <label class="block text-xs font-bold text-gray-700 mb-1">กรอกหมายเลข HN:</label>
+          <input
+            id="swal-input-hn"
+            class="w-full p-2.5 border-2 border-amber-300 focus:border-amber-500 rounded-lg text-base bg-white font-mono font-bold text-gray-900 text-center tracking-widest"
+            placeholder="เช่น 9001"
+            autofocus
+          />
         </div>
       `,
       showCancelButton: true,
-      confirmButtonText: "บันทึกการพักคิว",
+      confirmButtonText: "ตรวจสอบ HN",
       cancelButtonText: "ยกเลิก",
       confirmButtonColor: "#f59e0b",
       focusConfirm: false,
       preConfirm: () => {
-        const selectEl = document.getElementById("swal-select-patient");
-        const reasonEl = document.getElementById("swal-hold-reason");
-        return {
-          screening_id: selectEl ? selectEl.value : null,
-          reason: reasonEl ? reasonEl.value : "",
-        };
+        const val = document.getElementById("swal-input-hn")?.value?.trim();
+        if (!val) {
+          Swal.showValidationMessage("กรุณากรอกหมายเลข HN ก่อนนะคะ");
+          return false;
+        }
+        return val;
       },
     });
 
-    if (formValues && formValues.screening_id) {
-      const selectedPatient = waiting.find(
-        (p) => Number(p.screening_id) === Number(formValues.screening_id)
-      );
-      if (!selectedPatient) return;
+    if (!step1Ok || !inputHn) return;
 
-      setLoading(true);
-      try {
-        const res = await holdQueue({
-          screening_id: selectedPatient.screening_id,
-          hn: selectedPatient.hn,
-          patient_name: selectedPatient.patient_name,
-          reason: formValues.reason || "ติดประชุม / ขอพักคิวชั่วคราว",
+    // Step 2: ตรวจสอบ HN ว่าอยู่ในสถานะรอตรวจไหม
+    const waiting = queueState.waitingList || [];
+    const heldList = queueState.heldList || [];
+
+    const foundPatient = waiting.find(
+      (p) => String(p.hn).trim() === String(inputHn).trim()
+    );
+
+    // ตรวจสอบว่าพักอยู่แล้วหรือไม่
+    const alreadyHeld = heldList.some(
+      (h) => String(h.hn).trim() === String(inputHn).trim()
+    );
+
+    if (alreadyHeld) {
+      Swal.fire({
+        icon: "info",
+        title: "คิวนี้พักอยู่แล้วค่ะ",
+        text: `HN ${inputHn} อยู่ในรายการคิวพักชั่วคราวอยู่แล้วค่ะ`,
+        confirmButtonColor: "#f59e0b",
+      });
+      return;
+    }
+
+    if (!foundPatient) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่พบ HN นี้ในคิวรอตรวจค่ะ",
+        html: `<b>HN ${inputHn}</b> ไม่ได้อยู่ในสถานะ "รอตรวจ" ในขณะนี้ค่ะ<br/><small class="text-gray-500">กรุณาตรวจสอบหมายเลข HN อีกครั้ง หรือผู้รับบริการอาจยังไม่ได้ลงทะเบียนวันนี้</small>`,
+        confirmButtonColor: "#ef4444",
+      });
+      return;
+    }
+
+    // Step 3: แสดงชื่อและให้ยืนยันการพักคิว
+    const { value: reason, isConfirmed: step3Ok } = await Swal.fire({
+      title: "✅ พบผู้รับบริการในคิวรอตรวจ",
+      html: `
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-left">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-amber-400 flex items-center justify-center text-white font-black text-lg">👤</div>
+            <div>
+              <div class="font-mono font-black text-gray-900 text-lg">HN ${foundPatient.hn}</div>
+              <div class="text-gray-700 font-semibold text-sm">${foundPatient.patient_name || "-"}</div>
+              <div class="text-xs text-amber-700 font-medium mt-0.5">สถานะ: รอตรวจ (ลำดับที่ ${waiting.indexOf(foundPatient) + 1})</div>
+            </div>
+          </div>
+        </div>
+        <div class="text-left">
+          <label class="block text-xs font-bold text-gray-700 mb-1">เหตุผลการพักคิว (ไม่บังคับ):</label>
+          <input
+            id="swal-hold-reason"
+            class="w-full p-2 border border-gray-300 rounded text-sm bg-white"
+            placeholder="เช่น ติดประชุม / ขอพักคิวชั่วคราว"
+            value="ติดประชุม / ขอพักคิวชั่วคราว"
+          />
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "✅ ยืนยันพักคิวล่วงหน้า",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: "#f59e0b",
+      focusConfirm: false,
+      preConfirm: () => {
+        return document.getElementById("swal-hold-reason")?.value?.trim() || "ติดประชุม / ขอพักคิวชั่วคราว";
+      },
+    });
+
+    if (!step3Ok) return;
+
+    setLoading(true);
+    try {
+      const res = await holdQueue({
+        screening_id: foundPatient.screening_id,
+        hn: foundPatient.hn,
+        patient_name: foundPatient.patient_name,
+        reason: reason || "ติดประชุม / ขอพักคิวชั่วคราว",
+      });
+      if (res && res.success) {
+        setQueueState(res);
+        Swal.fire({
+          icon: "success",
+          title: "พักคิวล่วงหน้าสำเร็จ",
+          html: `คิว <b>HN ${foundPatient.hn}</b> (${foundPatient.patient_name || ""}) ถูกย้ายไปที่รายการคิวพักไว้แล้วค่ะ<br/><small class="text-gray-500">เมื่อผู้รับบริการกลับมา กด "ดึงเข้าคิว" เพื่อให้เป็นคิวถัดไปทันทีค่ะ</small>`,
+          timer: 3000,
+          showConfirmButton: false,
         });
-        if (res && res.success) {
-          setQueueState(res);
-          Swal.fire({
-            icon: "success",
-            title: "พักคิวล่วงหน้าสำเร็จ",
-            text: `คิว HN ${selectedPatient.hn} ถูกย้ายไปที่รายการคิวที่พักไว้แล้วค่ะ`,
-            timer: 2000,
-            showConfirmButton: false,
-          });
-        }
-      } catch (err) {
-        console.error("handleAdvanceHold error:", err);
-      } finally {
-        setLoading(false);
       }
+    } catch (err) {
+      console.error("handleAdvanceHold error:", err);
+    } finally {
+      setLoading(false);
     }
   };
+
+
 
   // 10) Move Queue Position (จัดลำดับคิว)
   const handleMoveQueue = async (screeningId, direction) => {
@@ -702,18 +747,19 @@ export default function QueueControlMini() {
                           >
                             ซ้ำ
                           </button>
-                          <button
-                            onClick={() => handleHold(room)}
+                           <button
+                            onClick={() => handleSkipFromCall(room)}
                             disabled={!canControl || loading}
                             className={`btn btn-xs ${
                               canControl
-                                ? "bg-amber-500 hover:bg-amber-600 text-white shadow-xs"
+                                ? "bg-red-500 hover:bg-red-600 text-white shadow-xs"
                                 : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
                             } px-2 py-0.5 text-[11px] font-semibold rounded-md border-0 h-6 min-h-0`}
-                            title={canControl ? "พักคิวนี้ไว้ชั่วคราว (Hold)" : "เฉพาะเจ้าของห้องหรือผู้ดูแลระบบ"}
+                            title={canControl ? "ข้ามคิวนี้ → HN ไปต่อท้ายคิวสุดท้าย" : "เฉพาะเจ้าของห้องหรือผู้ดูแลระบบ"}
                           >
-                            พัก
+                            ข้าม
                           </button>
+
                         </div>
                       ) : isPendingConsult ? (
                         /* กรณี ขอเวลาสักครู่ หลังส่งตรวจหน้าคอนเซาท์เสร็จ -> ขึ้นปุ่ม เรียกคิว สีน้ำเงิน พร้อมเวลานับถอยหลัง auto-call */
