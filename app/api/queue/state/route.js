@@ -14,10 +14,14 @@ if (!global.smartQueueState) {
     lastCall: null, // { room_no, room_name, staff_name, hn, patient_name, timestamp }
     priorityBypassedList: [], // Queue of patients bumped/bypassed by walk-in VIPs
     pendingPostConsultRooms: {}, // Rooms in post-consult cooldown (ขอเวลาสักครู่): map of room_no -> { finished_at, staff_id }
+    customQueueOrder: [], // Custom ordering of screening_ids for waiting queue
   };
 }
 if (!global.smartQueueState.pendingPostConsultRooms) {
   global.smartQueueState.pendingPostConsultRooms = {};
+}
+if (!global.smartQueueState.customQueueOrder) {
+  global.smartQueueState.customQueueOrder = [];
 }
 
 // Helper: Mark a room as entering post-consult cooldown (ขอเวลาสักครู่)
@@ -188,10 +192,23 @@ export async function getQueueData() {
       is_priority: priorityHns.has(String(s.hn)),
     }));
 
+  // Sort baseWaitingList by customQueueOrder if specified by admin or skip action
+  let sortedBaseWaitingList = [...baseWaitingList];
+  if (global.smartQueueState?.customQueueOrder && global.smartQueueState.customQueueOrder.length > 0) {
+    const orderMap = new Map(
+      global.smartQueueState.customQueueOrder.map((id, index) => [Number(id), index])
+    );
+    sortedBaseWaitingList.sort((a, b) => {
+      const idxA = orderMap.has(Number(a.screening_id)) ? orderMap.get(Number(a.screening_id)) : 999999;
+      const idxB = orderMap.has(Number(b.screening_id)) ? orderMap.get(Number(b.screening_id)) : 999999;
+      return idxA - idxB;
+    });
+  }
+
   // Reorder waiting list so that priority bypassed patients are AT THE VERY FRONT!
   const waitingList = [
-    ...baseWaitingList.filter((s) => priorityHns.has(String(s.hn))),
-    ...baseWaitingList.filter((s) => !priorityHns.has(String(s.hn))),
+    ...sortedBaseWaitingList.filter((s) => priorityHns.has(String(s.hn))),
+    ...sortedBaseWaitingList.filter((s) => !priorityHns.has(String(s.hn))),
   ];
 
   // 3) Construct rooms state based on config & active consultations
@@ -458,12 +475,80 @@ export async function POST(req) {
           reason,
         });
       }
+
+      // Remove from customQueueOrder while held
+      if (global.smartQueueState.customQueueOrder) {
+        global.smartQueueState.customQueueOrder = global.smartQueueState.customQueueOrder.filter(
+          (id) => Number(id) !== screeningId
+        );
+      }
     } else if (action === "resume") {
       const screeningId = Number(body.screening_id);
-      // Remove from heldList so they appear back in waitingList at top
+      // Remove from heldList
       global.smartQueueState.heldList = global.smartQueueState.heldList.filter(
         (h) => Number(h.screening_id) !== screeningId
       );
+
+      // Put at the very front of customQueueOrder so they are called next!
+      if (!global.smartQueueState.customQueueOrder) {
+        global.smartQueueState.customQueueOrder = [];
+      }
+      global.smartQueueState.customQueueOrder = [
+        screeningId,
+        ...global.smartQueueState.customQueueOrder.filter((id) => Number(id) !== screeningId),
+      ];
+    } else if (action === "skip") {
+      // 10-Minute Timeout or Manual Skip: move current patient in room to the BACK of the queue, clear room to empty
+      const roomNo = Number(body.room_no);
+      const room = global.smartQueueState.rooms[roomNo];
+      if (room && (room.current_screening_id || room.current_hn)) {
+        const scrId = Number(room.current_screening_id);
+        if (scrId) {
+          if (!global.smartQueueState.customQueueOrder) {
+            global.smartQueueState.customQueueOrder = [];
+          }
+          // Remove if present, then push to the back (ท้ายสุดของคิวรอตรวจ)
+          global.smartQueueState.customQueueOrder = global.smartQueueState.customQueueOrder.filter(
+            (id) => Number(id) !== scrId
+          );
+          global.smartQueueState.customQueueOrder.push(scrId);
+        }
+      }
+      delete global.smartQueueState.rooms[roomNo];
+      delete global.smartQueueState.pendingPostConsultRooms?.[roomNo];
+    } else if (action === "extend_call") {
+      // 10-Minute Timeout "Wait": reset called_at to now to wait for another 10 minutes
+      const roomNo = Number(body.room_no);
+      if (global.smartQueueState.rooms[roomNo]) {
+        global.smartQueueState.rooms[roomNo].called_at = new Date().toISOString();
+      }
+    } else if (action === "reorder_waiting") {
+      // Full reordering from admin drag/list
+      const order = Array.isArray(body.order) ? body.order.map(Number) : [];
+      global.smartQueueState.customQueueOrder = order;
+    } else if (action === "move_waiting") {
+      // Move single patient: 'top', 'up', 'down', 'bottom'
+      const screeningId = Number(body.screening_id);
+      const direction = String(body.direction || "up");
+      const currentData = await getQueueData();
+      let currentIds = (currentData.waitingList || []).map((w) => Number(w.screening_id));
+      const idx = currentIds.indexOf(screeningId);
+
+      if (idx !== -1) {
+        currentIds.splice(idx, 1);
+        if (direction === "top") {
+          currentIds.unshift(screeningId);
+        } else if (direction === "bottom") {
+          currentIds.push(screeningId);
+        } else if (direction === "up") {
+          const newIdx = Math.max(0, idx - 1);
+          currentIds.splice(newIdx, 0, screeningId);
+        } else if (direction === "down") {
+          const newIdx = Math.min(currentIds.length, idx + 1);
+          currentIds.splice(newIdx, 0, screeningId);
+        }
+        global.smartQueueState.customQueueOrder = currentIds;
+      }
     } else if (action === "complete_room") {
       const roomNo = Number(body.room_no);
       if (global.smartQueueState.rooms[roomNo]) {

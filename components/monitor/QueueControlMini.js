@@ -3,9 +3,30 @@
 import React, { useState, useEffect, useRef } from "react";
 import clientConfig from "@/config/Client";
 import useAuthStore from "@/stores/useAuthStore";
-import { getQueueState, callQueue, recallQueue, holdQueue, resumeQueue } from "@/services/queue";
-import { announceQueue } from "@/lib/utils/queueAudio";
-import { Play, Pause, RotateCcw, Monitor, ExternalLink } from "lucide-react";
+import {
+  getQueueState,
+  callQueue,
+  recallQueue,
+  holdQueue,
+  resumeQueue,
+  skipQueue,
+  extendCallQueue,
+  moveWaitingQueue,
+} from "@/services/queue";
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  Monitor,
+  ExternalLink,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpToLine,
+  ArrowDownToLine,
+  ListOrdered,
+  PlusCircle,
+  X,
+} from "lucide-react";
 import Swal from "sweetalert2";
 import Link from "next/link";
 
@@ -13,7 +34,9 @@ export default function QueueControlMini() {
   const [queueState, setQueueState] = useState({ rooms: [], waitingList: [], heldList: [], config: {} });
   const [loading, setLoading] = useState(false);
   const [countdownMap, setCountdownMap] = useState({}); // { [roomNo]: secondsRemaining }
+  const [showReorderModal, setShowReorderModal] = useState(false);
   const emptyTimestampsRef = useRef({});
+  const prompted10MinRoomsRef = useRef({});
   const isAutoCallingRef = useRef(false);
   const loadingRef = useRef(false);
 
@@ -289,7 +312,184 @@ export default function QueueControlMini() {
     return () => clearInterval(timer);
   }, [queueState, isAdmin, currentUser]);
 
-  // 8) Seed & Clear 20 Test Queues (สำหรับทดสอบระบบ)
+  // 8) 10-Minute Calling Timeout Checker (ดักเรียกคิวนานเกิน 10 นาที)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      (queueState.rooms || []).forEach((room) => {
+        if (room.status === "calling" && room.called_at && room.current_hn) {
+          const elapsedMs = Date.now() - new Date(room.called_at).getTime();
+          const tenMinutesMs = 10 * 60 * 1000; // 10 นาที
+
+          const lastPrompted = prompted10MinRoomsRef.current[room.room_no];
+          if (elapsedMs >= tenMinutesMs && lastPrompted !== room.called_at) {
+            if (canControlRoom(room)) {
+              prompted10MinRoomsRef.current[room.room_no] = room.called_at;
+
+              Swal.fire({
+                title: "⚠️ เรียกคิวนานเกิน 10 นาที",
+                html: `ห้อง <b>${room.room_name || room.room_no}</b> ได้เรียกผู้รับบริการ <b>HN ${room.current_hn}</b> (${room.patient_name || ""}) นานเกิน 10 นาทีแล้วค่ะ<br/><br/><span class="text-sm text-gray-600">ท่านต้องการให้ระบบ <b>"ข้าม"</b> คิวนี้ไปต่อท้ายสุด หรือ <b>"รอ"</b> ต่อไปอีก 10 นาทีคะ?</span>`,
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#ef4444", // สีแดง = ข้าม
+                cancelButtonColor: "#3b82f6",  // สีฟ้า = รอ
+                confirmButtonText: "ข้าม (ไปต่อท้ายคิว)",
+                cancelButtonText: "รอ (อีก 10 นาที)",
+                allowOutsideClick: false,
+              }).then(async (result) => {
+                if (result.isConfirmed) {
+                  // กด "ข้าม" -> ย้ายไปต่อท้ายคิว เคลียร์ห้องให้ว่างพร้อมเรียกคนใหม่
+                  try {
+                    setLoading(true);
+                    const res = await skipQueue({ room_no: room.room_no });
+                    if (res && res.success) {
+                      setQueueState(res);
+                      Swal.fire({
+                        icon: "success",
+                        title: "ข้ามคิวเรียบร้อยค่ะ",
+                        text: `ผู้รับบริการ HN ${room.current_hn} ถูกย้ายไปต่อท้ายคิวแล้วค่ะ ห้องตรวจว่างพร้อมเรียกคนถัดไป`,
+                        timer: 2000,
+                        showConfirmButton: false,
+                      });
+                    }
+                  } catch (e) {
+                    console.error("skipQueue error:", e);
+                  } finally {
+                    setLoading(false);
+                  }
+                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                  // กด "รอ" -> รีเซ็ตเวลานับต่ออีก 10 นาที
+                  try {
+                    setLoading(true);
+                    const res = await extendCallQueue({ room_no: room.room_no });
+                    if (res && res.success) {
+                      setQueueState(res);
+                      Swal.fire({
+                        icon: "info",
+                        title: "ขยายเวลารออีก 10 นาที",
+                        text: `ระบบจะรอนับต่ออีก 10 นาทีค่ะ`,
+                        timer: 1500,
+                        showConfirmButton: false,
+                      });
+                    }
+                  } catch (e) {
+                    console.error("extendCallQueue error:", e);
+                  } finally {
+                    setLoading(false);
+                  }
+                }
+              });
+            }
+          }
+        } else {
+          delete prompted10MinRoomsRef.current[room.room_no];
+        }
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [queueState, isAdmin, currentUser]);
+
+  // 9) Advance Hold Queue (พักคิวล่วงหน้า)
+  const handleAdvanceHold = async () => {
+    const waiting = queueState.waitingList || [];
+    if (waiting.length === 0) {
+      Swal.fire({
+        icon: "info",
+        title: "ไม่มีคิวรอรับบริการ",
+        text: "ขณะนี้ยังไม่มีผู้รับบริการในคิวรอตรวจที่สามารถพักได้ค่ะ",
+        confirmButtonText: "ตกลง",
+        confirmButtonColor: "#10b981",
+      });
+      return;
+    }
+
+    const optionsHtml = waiting
+      .map(
+        (p) =>
+          `<option value="${p.screening_id}">HN ${p.hn} - ${p.patient_name || "-"}</option>`
+      )
+      .join("");
+
+    const { value: formValues } = await Swal.fire({
+      title: "➕ พักคิวล่วงหน้า (Advance Hold)",
+      html: `
+        <div class="text-left text-xs mb-3 text-gray-600">
+          เลือกผู้รับบริการที่ต้องการพักคิวล่วงหน้า (เช่น ผู้รับบริการแจ้งติดประชุม หรือขอพักคิวก่อน):
+        </div>
+        <div class="mb-3 text-left">
+          <label class="block text-xs font-bold text-gray-700 mb-1">เลือกผู้รับบริการในคิว:</label>
+          <select id="swal-select-patient" class="w-full p-2 border border-gray-300 rounded text-sm bg-white font-mono">
+            ${optionsHtml}
+          </select>
+        </div>
+        <div class="text-left">
+          <label class="block text-xs font-bold text-gray-700 mb-1">เหตุผลการพักคิว:</label>
+          <input id="swal-hold-reason" class="w-full p-2 border border-gray-300 rounded text-sm bg-white" placeholder="ระบุเหตุผล เช่น ติดประชุม / ขอพักคิวชั่วคราว" value="ติดประชุม / ขอพักคิวชั่วคราว" />
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "บันทึกการพักคิว",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: "#f59e0b",
+      focusConfirm: false,
+      preConfirm: () => {
+        const selectEl = document.getElementById("swal-select-patient");
+        const reasonEl = document.getElementById("swal-hold-reason");
+        return {
+          screening_id: selectEl ? selectEl.value : null,
+          reason: reasonEl ? reasonEl.value : "",
+        };
+      },
+    });
+
+    if (formValues && formValues.screening_id) {
+      const selectedPatient = waiting.find(
+        (p) => Number(p.screening_id) === Number(formValues.screening_id)
+      );
+      if (!selectedPatient) return;
+
+      setLoading(true);
+      try {
+        const res = await holdQueue({
+          screening_id: selectedPatient.screening_id,
+          hn: selectedPatient.hn,
+          patient_name: selectedPatient.patient_name,
+          reason: formValues.reason || "ติดประชุม / ขอพักคิวชั่วคราว",
+        });
+        if (res && res.success) {
+          setQueueState(res);
+          Swal.fire({
+            icon: "success",
+            title: "พักคิวล่วงหน้าสำเร็จ",
+            text: `คิว HN ${selectedPatient.hn} ถูกย้ายไปที่รายการคิวที่พักไว้แล้วค่ะ`,
+            timer: 2000,
+            showConfirmButton: false,
+          });
+        }
+      } catch (err) {
+        console.error("handleAdvanceHold error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // 10) Move Queue Position (จัดลำดับคิว)
+  const handleMoveQueue = async (screeningId, direction) => {
+    try {
+      setLoading(true);
+      const res = await moveWaitingQueue({ screening_id: screeningId, direction });
+      if (res && res.success) {
+        setQueueState(res);
+      }
+    } catch (e) {
+      console.error("handleMoveQueue error:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 11) Seed & Clear 20 Test Queues (สำหรับทดสอบระบบ)
   const handleSeedTest = async () => {
     try {
       setLoading(true);
@@ -347,6 +547,14 @@ export default function QueueControlMini() {
           <span>แผงควบคุมระบบเรียกคิว (Smart Queue Monitor)</span>
         </h4>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowReorderModal(true)}
+            className="btn btn-xs btn-outline btn-primary flex items-center gap-1 font-semibold"
+            title="ปรับเปลี่ยนลำดับคิวรอตรวจ (เช่น เลื่อนขึ้น เลื่อนลง หรือดันคนที่เพิ่งกลับมาให้เป็นคิวถัดไป)"
+          >
+            <ListOrdered className="w-3.5 h-3.5" />
+            <span>จัดลำดับคิว ({queueState.waitingList?.length || 0})</span>
+          </button>
           <button
             onClick={handleSeedTest}
             disabled={loading}
@@ -577,6 +785,19 @@ export default function QueueControlMini() {
             <Pause className="w-3.5 h-3.5 text-amber-600" />
             คิวที่พักไว้ชั่วคราว (Held Queues): {queueState.heldList?.length || 0} ราย
           </span>
+          <button
+            onClick={handleAdvanceHold}
+            disabled={loading || !queueState.waitingList?.length}
+            className={`btn btn-xs ${
+              queueState.waitingList?.length
+                ? "bg-amber-600 hover:bg-amber-700 text-white shadow-2xs"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+            } py-0 px-2.5 h-6 flex items-center gap-1 font-semibold`}
+            title="เลือกผู้รับบริการจากคิวรอตรวจเพื่อพักคิวล่วงหน้า (เช่น แจ้งติดประชุม)"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>➕ พักคิวล่วงหน้า</span>
+          </button>
         </div>
 
         {queueState.heldList && queueState.heldList.length > 0 ? (
@@ -589,6 +810,11 @@ export default function QueueControlMini() {
                 <div className="font-mono font-bold text-gray-800">HN {item.hn}</div>
                 {item.patient_name && (
                   <div className="text-gray-500 text-[11px]">({item.patient_name})</div>
+                )}
+                {item.reason && (
+                  <div className="text-amber-700 text-[10px] bg-amber-50 px-1 py-0.5 rounded border border-amber-200" title={item.reason}>
+                    {item.reason}
+                  </div>
                 )}
                 <button
                   onClick={() => handleResume(item)}
@@ -605,6 +831,170 @@ export default function QueueControlMini() {
           <div className="text-xs text-gray-400 italic">ไม่มีคิวที่พักไว้ในขณะนี้</div>
         )}
       </div>
+
+      {/* Reorder Modal (จัดการลำดับคิวรอตรวจ) */}
+      {showReorderModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="px-5 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ListOrdered className="w-5 h-5 text-blue-200" />
+                <div>
+                  <h3 className="font-bold text-sm leading-tight">จัดลำดับคิวรอตรวจ (Queue Ordering)</h3>
+                  <p className="text-[11px] text-blue-100 font-normal">
+                    เลื่อนลำดับ หรือดันคนที่เพิ่งกลับมาให้เป็นคิวถัดไปได้ทันที
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowReorderModal(false)}
+                className="p-1 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-colors"
+                title="ปิด"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 overflow-y-auto flex-1 divide-y divide-gray-100">
+              {queueState.waitingList && queueState.waitingList.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="text-xs text-gray-500 mb-2 flex items-center justify-between font-semibold">
+                    <span>รายชื่อผู้รับบริการ ({queueState.waitingList.length} คน)</span>
+                    <span className="text-[11px] text-gray-400">คิวบนสุดจะถูกเรียกก่อน</span>
+                  </div>
+
+                  {queueState.waitingList.map((item, index) => {
+                    const isFirst = index === 0;
+                    const isLast = index === queueState.waitingList.length - 1;
+
+                    return (
+                      <div
+                        key={item.screening_id}
+                        className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                          isFirst
+                            ? "bg-emerald-50/70 border-emerald-300 shadow-xs"
+                            : "bg-gray-50/70 border-gray-200 hover:bg-gray-100/70"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${
+                              isFirst
+                                ? "bg-emerald-600 text-white shadow-xs"
+                                : "bg-gray-200 text-gray-700"
+                            }`}
+                          >
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-mono font-black text-sm text-gray-900">
+                                HN {item.hn}
+                              </span>
+                              {isFirst && (
+                                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded border border-emerald-300">
+                                  คิวถัดไป
+                                </span>
+                              )}
+                              {item.is_priority && (
+                                <span className="text-[10px] bg-purple-100 text-purple-800 font-bold px-1.5 py-0.2 rounded border border-purple-300">
+                                  เร่งด่วน
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-600 truncate max-w-[180px] sm:max-w-[220px]" title={item.patient_name}>
+                              {item.patient_name || "-"}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handleMoveQueue(item.screening_id, "top")}
+                            disabled={loading || isFirst}
+                            className={`btn btn-xs ${
+                              isFirst
+                                ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400"
+                                : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            } px-2 h-7 rounded-md border-0 text-[11px] font-semibold flex items-center gap-0.5`}
+                            title="ดันขึ้นเป็นคิวแรกสุด (คิวถัดไปที่จะถูกเรียกทันที)"
+                          >
+                            <ArrowUpToLine className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">คิวแรก</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleMoveQueue(item.screening_id, "up")}
+                            disabled={loading || isFirst}
+                            className={`btn btn-xs ${
+                              isFirst
+                                ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400"
+                                : "bg-blue-600 hover:bg-blue-700 text-white"
+                            } p-1.5 h-7 rounded-md border-0`}
+                            title="เลื่อนขึ้น 1 ลำดับ"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => handleMoveQueue(item.screening_id, "down")}
+                            disabled={loading || isLast}
+                            className={`btn btn-xs ${
+                              isLast
+                                ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400"
+                                : "bg-blue-600 hover:bg-blue-700 text-white"
+                            } p-1.5 h-7 rounded-md border-0`}
+                            title="เลื่อนลง 1 ลำดับ"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => handleMoveQueue(item.screening_id, "bottom")}
+                            disabled={loading || isLast}
+                            className={`btn btn-xs ${
+                              isLast
+                                ? "opacity-30 cursor-not-allowed bg-gray-100 text-gray-400"
+                                : "bg-gray-500 hover:bg-gray-600 text-white"
+                            } p-1.5 h-7 rounded-md border-0`}
+                            title="ย้ายไปท้ายสุด"
+                          >
+                            <ArrowDownToLine className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-12 text-center text-gray-400">
+                  <p className="text-3xl mb-2">🌿</p>
+                  <p className="text-sm font-semibold">ไม่มีคิวรอตรวจในขณะนี้</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    เมื่อมีผู้รับบริการรอตรวจ ท่านสามารถเข้ามาปรับเปลี่ยนลำดับคิวได้ที่นี่ค่ะ
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+              <span className="text-xs text-gray-500">
+                การเปลี่ยนแปลงมีผลต่อจอทีวีและทุกห้องทันที
+              </span>
+              <button
+                onClick={() => setShowReorderModal(false)}
+                className="btn btn-sm btn-outline border-gray-300 text-gray-700 hover:bg-gray-200 font-semibold"
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
